@@ -7,11 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		3BAEC40419F53DFD002C2109 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3BAEC40319F53DFD002C2109 /* main.cpp */; };
+		3BF10D3E19F5467B008BF60F /* mips_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3BF10D3C19F5467B008BF60F /* mips_cpu.cpp */; };
+		3BF10D3F19F5467B008BF60F /* test_mips.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3BF10D3D19F5467B008BF60F /* test_mips.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
-		3BAEC3FE19F53DFD002C2109 /* CopyFiles */ = {
+		3BF10D2F19F54649008BF60F /* CopyFiles */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
 			dstPath = /usr/share/man/man1/;
@@ -23,12 +24,14 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		3BAEC40019F53DFD002C2109 /* MIPSim */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MIPSim; sourceTree = BUILT_PRODUCTS_DIR; };
-		3BAEC40319F53DFD002C2109 /* main.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
+		3BF10D3119F54649008BF60F /* MIPSim */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = MIPSim; sourceTree = BUILT_PRODUCTS_DIR; };
+		3BF10D3C19F5467B008BF60F /* mips_cpu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mips_cpu.cpp; sourceTree = "<group>"; };
+		3BF10D3D19F5467B008BF60F /* test_mips.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = test_mips.cpp; sourceTree = "<group>"; };
+		3BF10D4019F546E5008BF60F /* include */ = {isa = PBXFileReference; lastKnownFileType = folder; path = include; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		3BAEC3FD19F53DFD002C2109 /* Frameworks */ = {
+		3BF10D2E19F54649008BF60F /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -38,40 +41,34 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		3BAEC3F719F53DFD002C2109 = {
+		3BF10D2819F54649008BF60F = {
 			isa = PBXGroup;
 			children = (
-				3BAEC40219F53DFD002C2109 /* MIPSim */,
-				3BAEC40119F53DFD002C2109 /* Products */,
+				3BF10D4019F546E5008BF60F /* include */,
+				3BF10D3C19F5467B008BF60F /* mips_cpu.cpp */,
+				3BF10D3D19F5467B008BF60F /* test_mips.cpp */,
+				3BF10D3219F54649008BF60F /* Products */,
 			);
 			sourceTree = "<group>";
 		};
-		3BAEC40119F53DFD002C2109 /* Products */ = {
+		3BF10D3219F54649008BF60F /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				3BAEC40019F53DFD002C2109 /* MIPSim */,
+				3BF10D3119F54649008BF60F /* MIPSim */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		3BAEC40219F53DFD002C2109 /* MIPSim */ = {
-			isa = PBXGroup;
-			children = (
-				3BAEC40319F53DFD002C2109 /* main.cpp */,
-			);
-			path = MIPSim;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		3BAEC3FF19F53DFD002C2109 /* MIPSim */ = {
+		3BF10D3019F54649008BF60F /* MIPSim */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 3BAEC40719F53DFD002C2109 /* Build configuration list for PBXNativeTarget "MIPSim" */;
+			buildConfigurationList = 3BF10D3819F54649008BF60F /* Build configuration list for PBXNativeTarget "MIPSim" */;
 			buildPhases = (
-				3BAEC3FC19F53DFD002C2109 /* Sources */,
-				3BAEC3FD19F53DFD002C2109 /* Frameworks */,
-				3BAEC3FE19F53DFD002C2109 /* CopyFiles */,
+				3BF10D2D19F54649008BF60F /* Sources */,
+				3BF10D2E19F54649008BF60F /* Frameworks */,
+				3BF10D2F19F54649008BF60F /* CopyFiles */,
 			);
 			buildRules = (
 			);
@@ -79,53 +76,54 @@
 			);
 			name = MIPSim;
 			productName = MIPSim;
-			productReference = 3BAEC40019F53DFD002C2109 /* MIPSim */;
+			productReference = 3BF10D3119F54649008BF60F /* MIPSim */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		3BAEC3F819F53DFD002C2109 /* Project object */ = {
+		3BF10D2919F54649008BF60F /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 0600;
 				ORGANIZATIONNAME = OJFord;
 				TargetAttributes = {
-					3BAEC3FF19F53DFD002C2109 = {
+					3BF10D3019F54649008BF60F = {
 						CreatedOnToolsVersion = 6.0.1;
 					};
 				};
 			};
-			buildConfigurationList = 3BAEC3FB19F53DFD002C2109 /* Build configuration list for PBXProject "MIPSim" */;
+			buildConfigurationList = 3BF10D2C19F54649008BF60F /* Build configuration list for PBXProject "MIPSim" */;
 			compatibilityVersion = "Xcode 3.2";
 			developmentRegion = English;
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
 			);
-			mainGroup = 3BAEC3F719F53DFD002C2109;
-			productRefGroup = 3BAEC40119F53DFD002C2109 /* Products */;
+			mainGroup = 3BF10D2819F54649008BF60F;
+			productRefGroup = 3BF10D3219F54649008BF60F /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				3BAEC3FF19F53DFD002C2109 /* MIPSim */,
+				3BF10D3019F54649008BF60F /* MIPSim */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXSourcesBuildPhase section */
-		3BAEC3FC19F53DFD002C2109 /* Sources */ = {
+		3BF10D2D19F54649008BF60F /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3BAEC40419F53DFD002C2109 /* main.cpp in Sources */,
+				3BF10D3E19F5467B008BF60F /* mips_cpu.cpp in Sources */,
+				3BF10D3F19F5467B008BF60F /* test_mips.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		3BAEC40519F53DFD002C2109 /* Debug */ = {
+		3BF10D3619F54649008BF60F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -165,7 +163,7 @@
 			};
 			name = Debug;
 		};
-		3BAEC40619F53DFD002C2109 /* Release */ = {
+		3BF10D3719F54649008BF60F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
@@ -199,14 +197,14 @@
 			};
 			name = Release;
 		};
-		3BAEC40819F53DFD002C2109 /* Debug */ = {
+		3BF10D3919F54649008BF60F /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = "$(TARGET_NAME)";
 			};
 			name = Debug;
 		};
-		3BAEC40919F53DFD002C2109 /* Release */ = {
+		3BF10D3A19F54649008BF60F /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -216,24 +214,24 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		3BAEC3FB19F53DFD002C2109 /* Build configuration list for PBXProject "MIPSim" */ = {
+		3BF10D2C19F54649008BF60F /* Build configuration list for PBXProject "MIPSim" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				3BAEC40519F53DFD002C2109 /* Debug */,
-				3BAEC40619F53DFD002C2109 /* Release */,
+				3BF10D3619F54649008BF60F /* Debug */,
+				3BF10D3719F54649008BF60F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		3BAEC40719F53DFD002C2109 /* Build configuration list for PBXNativeTarget "MIPSim" */ = {
+		3BF10D3819F54649008BF60F /* Build configuration list for PBXNativeTarget "MIPSim" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				3BAEC40819F53DFD002C2109 /* Debug */,
-				3BAEC40919F53DFD002C2109 /* Release */,
+				3BF10D3919F54649008BF60F /* Debug */,
+				3BF10D3A19F54649008BF60F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = 3BAEC3F819F53DFD002C2109 /* Project object */;
+	rootObject = 3BF10D2919F54649008BF60F /* Project object */;
 }
