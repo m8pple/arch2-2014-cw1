@@ -228,7 +228,7 @@ but also how easy it is to deal with, and try to test, corner cases.
 
 
 Code  |   Meaning                                 | Complexity  
---------------------------------------------------|-----------
+------|-------------------------------------------|-----------
 ADD   |  Add (with overflow)                      | 2  XX       
 ADDI  |  Add immediate (with overflow)            | 2  XX       
 ADDIU |  Add immediate unsigned (no overflow)     | 2  XX       
