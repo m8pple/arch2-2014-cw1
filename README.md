@@ -28,9 +28,9 @@ Coursework Deliverables
 
 There are two C/C++ components to this coursework:
 
-1 - Create a MIPS software simulator
+1. Create a MIPS software simulator
 
-2 - Develop a test suite for your MIPs simulator
+2. Develop a test suite for your MIPs simulator
 
 The API for the simulator is given as a bare C header file,
 defining the functions and data-types involved, along
@@ -44,31 +44,31 @@ you are that way inclined), containing the original directory
 structure and files, as well as the files that you have contributed.
 The two key things you will be adding are:
 
- - src/<your_login>/mips_cpu.c or mips_cpu.cpp
+ - `src/<your_login>/mips_cpu.c` or `mips_cpu.cpp`
  
- - src/<your_login>/test_mips.c or test_mips.cpp
+ - `src/<your_login>/test_mips.c` or `test_mips.cpp`
  
 The first part is the implementation of a mips simulator, and
 is essentially a library that implements the api found in
-include/mips_cpu.h. You can use C or C++, either is fine.
+`include/mips_cpu.h`. You can use C or C++, either is fine.
 If you want to split into multiple files, then feel free to do
-so - anything which matches the pattern src/<your_login>/mips_cpu_*.c
-or src/<your_login>/mips_cpu_*.cpp will also get compiled into
+so - anything which matches the pattern `src/<your_login>/mips_cpu_*.c`
+or `src/<your_login>/mips_cpu_*.cpp` will also get compiled into
 your library. 
 
 The second part is the test suite which will drive your
 simulator and make it do things. This is a C or C++ program
 (so it will have a main function), and should be either
-src/<your_login>/test_mips.c or src/<your_login>/test_mips.cpp.
+`src/<your_login>/test_mips.c` or `src/<your_login>/test_mips.cpp`.
 Again, if you want to split into multiple files, anything
-that matches the pattern src/<your_login>/test_mips_*.c or
-src/<your_login>/test_mips_*.cpp will get compiled into
+that matches the pattern `src/<your_login>/test_mips_*.c` or
+`src/<your_login>/test_mips_*.cpp` will get compiled into
 your program.
 
 You can also add your own private header files (generally
 a good idea), which should be part of the submitted zip file,
 but they don't need to follow any specific pattern. However,
-they should be completely located within the src/<your_login>
+they should be completely located within the `src/<your_login>`
 directory or a sub-directory of it. Note that your simulator
 and your test suite are two different components, so do not
 rely on the specific behaviour of _your_ simulator, it should
@@ -82,7 +82,7 @@ The directory structure should look like:
     +-include
     | |
     | +-mips.h
-    | +-mips_*.h  #Other mips headers
+    | +-mips_*.h  # Other mips headers
     |
     +-src
     | |
@@ -124,10 +124,10 @@ with it. The given structure allows me to know exactly what
 your code needs in order to compile (I need to tell the compiler
 which source files to link together), and when I want to move
 implementations around I need to know what is important (so
-stuff in src/<your_login>.
+stuff in `src/<your_login>`.
 
-Assessment criterion
---------------------
+Assessment criteria
+-------------------
 
 This is an exercise in both implementing specifications,
 and in testing specifications, so the assessment
@@ -153,7 +153,7 @@ is weighted as follows:
   even if you have a small number of instructions implemented,
   as long as they are tested well.
   
-- (10%) Bug reports: This specification will not be perfect, and
+- 10% Bug reports: This specification will not be perfect, and
   I welcome bug reports. Things like spelling mistakes are
   welcome, but not especially valuable. What is important
   are points of genuine ambiguity, or errors of implementation
@@ -305,17 +305,17 @@ and read the entire thing again.
 
 You can get the source code either by:
 
- 1 - Downloading the zip file (see the link on the right hand side),
-     which gives you a snapshot of the files in the repository.
- 
- 2 - Cloning the source code to your local directory, keeping the
-     git information intact. You don't need a github account to do
-     this, and your repository will be private.
+1. Downloading the zip file (see the link on the right hand side),
+   which gives you a snapshot of the files in the repository.
 
- 3 - Fork the code into your own repository. This assumes that you
-     have your own account, and presumably the ability to keep
-     that repository private. See the [Student Pack](https://education.github.com/pack)
-     if you're interested in that direction.
+2. Cloning the source code to your local directory, keeping the
+   git information intact. You don't need a github account to do
+   this, and your repository will be private.
+
+3. Fork the code into your own repository. This assumes that you
+   have your own account, and presumably the ability to keep
+   that repository private. See the [Student Pack](https://education.github.com/pack)
+   if you're interested in that direction.
 
 While it is not required, I would highly recommend that you try
 option 2 (I will use this route in class). It is good to get some
@@ -347,14 +347,14 @@ The source code is part of the specification, and is heavily
 documented (it is much more important to document APIs than
 it is to document implementation). Suggested reading order is:
 
- - include/mips.h
- - include/mips_mem.h
- - include/mips_cpu.h
- - include/mips_test.h
+ - `include/mips.h`
+ - `include/mips_mem.h`
+ - `include/mips_cpu.h`
+ - `include/mips_test.h`
 
-*Optional* : The comments follow the format for a well-known tool
+*Optional*: The comments follow the format for a well-known tool
 called [doxygen](http://www.stack.nl/~dimitri/doxygen/). If you
-apply doxygen to the file doc/mips.doygen, then it will generate
+apply doxygen to the file `doc/mips.doygen`, then it will generate
 some nice html formatted API documentation for you.
 
 ### Check you understand MIPS
@@ -365,7 +365,7 @@ discussion of MIPS in the course text book, and the MIPS
 specification itself is available online, for example:
 http://math-atlas.sourceforge.net/devel/assembly/mips-iv.pdf
 There are multiple revisions or extensions of the instruction set,
-so rememer that we are only considering MIPS-1.
+so remember that we are only considering MIPS-1.
 
 I think this is quite a nice break-down of the instructions,
 but be careful about the details:
