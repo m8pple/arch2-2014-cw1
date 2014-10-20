@@ -30,7 +30,7 @@ There are two C/C++ components to this coursework:
 
 1. Create a MIPS software simulator
 
-2. Develop a test suite for your MIPs simulator
+2. Develop a test suite for your MIPS simulator
 
 The API for the simulator is given as a bare C header file,
 defining the functions and data-types involved, along
@@ -108,8 +108,8 @@ The directory structure should look like:
     +-(anything else you want, but it won't be available in the environment)
 
 I accept that it is a bit painful making sure you get exactly
-the right base directory in a zip, so during assesment I will
-go looking for mips.h, and will use that to anchor the rest
+the right base directory in a zip, so during assessment I will
+go looking for `mips.h`, and will use that to anchor the rest
 of the directory tree.
 
 Your submitted code will need to work within the
@@ -144,7 +144,7 @@ is weighted as follows:
   subset that everyone will be able to get fully working, a larger
   set that most people will be able to get partially working, and some
   instructions that are really quite difficult to get right and many
-  people won't attempt. Some hints on that will apear later.
+  people won't attempt. Some hints on that will appear later.
 
 - 30% Testing: What proportion of the CPU simulator is
   exercised and tested by the submitted test suite? So _if_ an
@@ -166,19 +166,19 @@ is weighted as follows:
 Except for the marks for compilation (where everyone
 should really get full marks, but is down to me assessing
 how much manual work I needed to put in) and bug reports
-(which are subjective and more rare) the assesment is
+(which are subjective and more rare) the assessment is
 entirely quantitative and metric based.
 
 There are two submission deadlines, one soft, one hard:
 
 - Friday 24th October: deadline for formative (ungraded)
-  assesment. If you submit a version by this deadline, it
+  assessment. If you submit a version by this deadline, it
   will be put through a large subset of the assessment. The
   results (but not a grade), will be returned on Monday 27th.
   Submission is not required, but is obviously encouraged.
 
 - Friday 31st October: deadline for summative (graded)
-  assesment. Whether or not you submitted for the previous
+  assessment. Whether or not you submitted for the previous
   deadline, everyone must submit for this deadline. This
   will be the part which results in the grade for this
   coursework.
@@ -339,7 +339,7 @@ The submission itself is through blackboard as a zip, so there
 is no requirement to use git. Even if I update the repository,
 you can still just download the zip again and copy your current
 work in - it is deliberately designed so that copying your
-src/<login> directory into the updated source code will work.
+`src/<login>` directory into the updated source code will work.
 
 ### Read the source code
 
