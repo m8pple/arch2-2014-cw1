@@ -124,7 +124,7 @@ with it. The given structure allows me to know exactly what
 your code needs in order to compile (I need to tell the compiler
 which source files to link together), and when I want to move
 implementations around I need to know what is important (so
-stuff in `src/<your_login>`.
+stuff in `src/<your_login>`).
 
 Assessment criteria
 -------------------
@@ -153,7 +153,7 @@ is weighted as follows:
   even if you have a small number of instructions implemented,
   as long as they are tested well.
   
-- 10% Bug reports: This specification will not be perfect, and
+- (10%) Bug reports: This specification will not be perfect, and
   I welcome bug reports. Things like spelling mistakes are
   welcome, but not especially valuable. What is important
   are points of genuine ambiguity, or errors of implementation
