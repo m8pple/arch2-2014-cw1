@@ -1,3 +1,11 @@
+//
+//  mips_instr.h
+//  MIPSim
+//
+//  Created by Ollie Ford on 22/10/2014.
+//  Copyright (c) 2014 OJFord. All rights reserved.
+//
+
 #ifndef MIPS_NUM_REG
 #define MIPS_NUM_REG 32U
 #endif
