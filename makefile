@@ -1,6 +1,6 @@
 # Your login. For example, mine is dt10. Yours
 # won't be eie2ugs...
-LOGIN ?= eie2ugs
+LOGIN ?= ojf13
 
 CPPFLAGS += -W -Wall -g
 CPPFLAGS += -I include
