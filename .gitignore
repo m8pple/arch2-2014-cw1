@@ -4,3 +4,4 @@
 *.plist
 *.dSYM
 test_mips
+*.out
