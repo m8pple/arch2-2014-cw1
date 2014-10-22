@@ -5,4 +5,4 @@
 *.dSYM
 test_mips
 *.out
-*.xcodeproj
+*.xcodeproj/
