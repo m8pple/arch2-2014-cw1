@@ -51,6 +51,6 @@ mips_error mips_cpu_get_pc(mips_cpu_h cpu, uint32_t *oVal){
 }
 
 mips_error mips_cpu_set_pc(mips_cpu_h cpu, uint32_t iVal){
-	//cpu->pc.value(iVal);
+	cpu->pc(iVal);
 	return mips_Success;
 }

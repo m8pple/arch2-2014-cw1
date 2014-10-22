@@ -3,6 +3,10 @@
 #define MIPS_NUM_REG 32U
 #endif
 
+/*
+ * Implementation specific classes
+ */
+
 struct mips_register{
 public:
 	mips_register(void) : _value(0), _allowSet(true){};
@@ -79,6 +83,10 @@ public:
 	
 	void step(void){
 		_pc.value(_pc.value()+4);
+	}
+	
+	void pc(uint32_t iVal){
+		_pc = iVal;
 	}
 	
 	uint32_t pc(void) const{
