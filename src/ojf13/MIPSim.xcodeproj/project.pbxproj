@@ -9,6 +9,8 @@
 /* Begin PBXBuildFile section */
 		3BF10D3E19F5467B008BF60F /* mips_cpu.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3BF10D3C19F5467B008BF60F /* mips_cpu.cpp */; };
 		3BF10D3F19F5467B008BF60F /* test_mips.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3BF10D3D19F5467B008BF60F /* test_mips.cpp */; };
+		3BF10D4219F6DE76008BF60F /* mips_test_framework.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3BF10D4119F6DE76008BF60F /* mips_test_framework.cpp */; };
+		3BF10D4419F6DEAA008BF60F /* mips_mem_ram.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 3BF10D4319F6DEAA008BF60F /* mips_mem_ram.cpp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -28,6 +30,13 @@
 		3BF10D3C19F5467B008BF60F /* mips_cpu.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = mips_cpu.cpp; sourceTree = "<group>"; };
 		3BF10D3D19F5467B008BF60F /* test_mips.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = test_mips.cpp; sourceTree = "<group>"; };
 		3BF10D4019F546E5008BF60F /* include */ = {isa = PBXFileReference; lastKnownFileType = folder; path = include; sourceTree = "<group>"; };
+		3BF10D4119F6DE76008BF60F /* mips_test_framework.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mips_test_framework.cpp; path = ../shared/mips_test_framework.cpp; sourceTree = "<group>"; };
+		3BF10D4319F6DEAA008BF60F /* mips_mem_ram.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = mips_mem_ram.cpp; path = ../shared/mips_mem_ram.cpp; sourceTree = "<group>"; };
+		3BF10D4519F6DEB8008BF60F /* mips_core.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mips_core.h; path = ../../include/mips_core.h; sourceTree = "<group>"; };
+		3BF10D4619F6DEB8008BF60F /* mips_cpu.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mips_cpu.h; path = ../../include/mips_cpu.h; sourceTree = "<group>"; };
+		3BF10D4719F6DEB8008BF60F /* mips_mem.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mips_mem.h; path = ../../include/mips_mem.h; sourceTree = "<group>"; };
+		3BF10D4819F6DEB8008BF60F /* mips_test.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mips_test.h; path = ../../include/mips_test.h; sourceTree = "<group>"; };
+		3BF10D4919F6DEB8008BF60F /* mips.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mips.h; path = ../../include/mips.h; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -44,6 +53,7 @@
 		3BF10D2819F54649008BF60F = {
 			isa = PBXGroup;
 			children = (
+				3BF10D4A19F6DEC5008BF60F /* Framework */,
 				3BF10D4019F546E5008BF60F /* include */,
 				3BF10D3C19F5467B008BF60F /* mips_cpu.cpp */,
 				3BF10D3D19F5467B008BF60F /* test_mips.cpp */,
@@ -57,6 +67,20 @@
 				3BF10D3119F54649008BF60F /* MIPSim */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		3BF10D4A19F6DEC5008BF60F /* Framework */ = {
+			isa = PBXGroup;
+			children = (
+				3BF10D4519F6DEB8008BF60F /* mips_core.h */,
+				3BF10D4619F6DEB8008BF60F /* mips_cpu.h */,
+				3BF10D4719F6DEB8008BF60F /* mips_mem.h */,
+				3BF10D4819F6DEB8008BF60F /* mips_test.h */,
+				3BF10D4919F6DEB8008BF60F /* mips.h */,
+				3BF10D4319F6DEAA008BF60F /* mips_mem_ram.cpp */,
+				3BF10D4119F6DE76008BF60F /* mips_test_framework.cpp */,
+			);
+			name = Framework;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -115,8 +139,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3BF10D4219F6DE76008BF60F /* mips_test_framework.cpp in Sources */,
 				3BF10D3E19F5467B008BF60F /* mips_cpu.cpp in Sources */,
 				3BF10D3F19F5467B008BF60F /* test_mips.cpp in Sources */,
+				3BF10D4419F6DEAA008BF60F /* mips_mem_ram.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -230,6 +256,7 @@
 				3BF10D3A19F54649008BF60F /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
