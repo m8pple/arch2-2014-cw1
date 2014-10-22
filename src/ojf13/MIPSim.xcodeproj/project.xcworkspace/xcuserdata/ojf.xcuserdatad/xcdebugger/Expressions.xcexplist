@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<VariablesViewState
-   version = "1.0">
-   <ContextStates>
-      <ContextState
-         contextName = "memoryIO(mips_cpu_impl*, mips_mem_provider*):test_mips.cpp">
-      </ContextState>
-   </ContextStates>
-</VariablesViewState>
