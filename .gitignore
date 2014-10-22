@@ -1,2 +1,6 @@
 /doc/html
 /doc/latex
+*.o
+*.plist
+*.dSYM
+test_mips
