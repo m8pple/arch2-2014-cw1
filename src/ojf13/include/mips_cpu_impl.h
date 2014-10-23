@@ -10,8 +10,13 @@
 #define MIPS_NUM_REG 32U
 #endif
 
-#include "./mips_instr.h"
-#include "./mips_cpu_mem.h"
+#if DEBUG==1	//Xcode doesn't want me to put ojf13/ on the path..
+#include "mips_instr.h"
+#include "mips_cpu_mem.h"
+#else
+#include "include/mips_instr.h"
+#include "include/mips_cpu_mem.h"
+#endif
 
 typedef enum _mips_cpu_stage{
 	IF	=0,
