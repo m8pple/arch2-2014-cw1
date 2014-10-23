@@ -9,47 +9,49 @@
 #include "../../include/mips_test.h"
 #include "include/test_mips.h"
 #include "include/mips_instr.h"
+
+#include <random>
 #include <iostream>
 
-MIPS_instr instrFromAsm(MIPS_asm mnem){
-	return MIPS_instruction[mnem];
+mips_instr instrFromAsm(mips_asm mnem){
+	return mipsInstruction[mnem];
 }
 
 struct Instruction{
 public:
 	//RType
-	Instruction(MIPS_asm mnem,
+	Instruction(mips_asm mnem,
 				unsigned sreg, unsigned treg, unsigned dreg,
 				unsigned shft) :
-	Instruction(MIPS_instruction[mnem].opco,
+	Instruction(mipsInstruction[mnem].opco,
 				sreg, treg, dreg,
-				shft, MIPS_instruction[mnem].func){
+				shft, mipsInstruction[mnem].func){
 		
 		_mnem=mnem;
-		if( MIPS_instruction[mnem].type != RType )
+		if( mipsInstruction[mnem].type != RType )
 			throw mips_ExceptionInvalidInstruction;
 	}
 	
 	//IType
-	Instruction(MIPS_asm mnem,
+	Instruction(mips_asm mnem,
 		  unsigned sreg, unsigned treg,
 		  unsigned imdt) :
-	Instruction(MIPS_instruction[mnem].opco,
-				sreg, MIPS_instruction[mnem].func?MIPS_instruction[mnem].func:treg,
+	Instruction(mipsInstruction[mnem].opco,
+				sreg, mipsInstruction[mnem].func?mipsInstruction[mnem].func:treg,
 				imdt){
 		
 		_mnem=mnem;
-		if( MIPS_instruction[mnem].type != IType )
+		if( mipsInstruction[mnem].type != IType )
 			throw mips_ExceptionInvalidInstruction;
 	}
 	
 	//JType
-	Instruction(MIPS_asm mnem,
+	Instruction(mips_asm mnem,
 				unsigned trgt) :
-	Instruction(MIPS_instruction[mnem].opco, trgt){
+	Instruction(mipsInstruction[mnem].opco, trgt){
 		
 		_mnem=mnem;
-		if( MIPS_instruction[mnem].type != JType )
+		if( mipsInstruction[mnem].type != JType )
 			throw mips_ExceptionInvalidInstruction;
 	}
 	
@@ -64,7 +66,7 @@ public:
 		return _value;
 	}
 	
-	MIPS_asm mnem() const{
+	mips_asm mnem() const{
 		return _mnem;
 	}
 
@@ -97,7 +99,7 @@ private:
 		_value |= (trgt & MASK_26b) << POS_TRGT;
 	}
 	uint32_t _value;
-	MIPS_asm _mnem;
+	mips_asm _mnem;
 };
 
 int main(){
@@ -146,21 +148,30 @@ testResult registerReset(mips_cpu_h cpu, mips_mem_h mem){
         correct = 0;
     }
     
-    return {"<internal>", "Check all registers zeroed after reset.", correct};
+    return {"<INTERNAL>", "Check all registers zeroed after reset.", correct};
 }
 
 testResult memoryIO(mips_cpu_h cpu, mips_mem_h mem){
-	Instruction instr = Instruction(AND, 0, 0, 0, 0);
-	mips_mem_write(mem, 0x0, 4, instr.bytes());
+	int correct = 1;
+	srand(764835875);
 	
-	uint8_t got[4];
-	mips_mem_read(mem, 0x0, 4, got);
+	for(int r=0; r<1024; r++){
+		uint8_t ibuf[4] = {
+			(uint8_t)(rand()%(1<<31)),
+			(uint8_t)(rand()%(1<<31)),
+			(uint8_t)(rand()%(1<<31)),
+			(uint8_t)(rand()%(1<<31))
+		};
+		mips_mem_write(mem, 0x0, 4, ibuf);
+		
+		uint8_t obuf[4];
+		mips_mem_read(mem, 0x0, 4, obuf);
+		
+		for(int i=0; i<4; ++i)
+			correct &= obuf[i]==ibuf[i] ? 1 : 0;
+	}
 	
-	int correct=0;
-	for(int i=0; i<4; ++i)
-		correct += got[i]==instr.bytes()[i] ? 1 : 0;
-	
-	return {"<internal>", "Check can read same value back after write.", correct};
+	return {"<INTERNAL>", "Check can read same value back after write.", correct};
 }
 
 testResult rTypeAnd(mips_cpu_h cpu, mips_mem_h mem){

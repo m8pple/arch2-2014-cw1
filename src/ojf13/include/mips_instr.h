@@ -25,7 +25,7 @@
 #define POS_IMDT	00U
 #define POS_TRGT	00U
 
-typedef enum _MIPS_asm{
+typedef enum _mips_asm{
 	ADD=0,
 	ADDI=1,
 	ADDIU=2,
@@ -73,21 +73,21 @@ typedef enum _MIPS_asm{
 	SW=44,
 	XOR=45,
 	XORI=46,
-} MIPS_asm;
+} mips_asm;
 
 typedef enum _instrType{
 	RType=0,
 	IType=1,
 	JType=2
-} instrType;
+} mips_instr_type;
 
-struct MIPS_instr{
-	instrType	type;
-	unsigned	opco;
-	unsigned	func;	//RType func, or IType branch treg
+struct mips_instr{
+	mips_instr_type	type;
+	unsigned		opco;
+	unsigned		func;	//RType func, or IType branch treg
 };
 
-const MIPS_instr MIPS_instruction[47] = {
+const mips_instr mipsInstruction[47] = {
 	{ RType, 0,							1<<5					},	//ADD
 	{ IType, 1<<3,						NULL					},	//ADDI
 	{ IType, 1<<3 | 1,					NULL					},	//ADDIU
