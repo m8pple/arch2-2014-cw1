@@ -1,8 +1,8 @@
 //
-//  mips_instr.h
+//  mips_cpu_mem.h
 //  MIPSim
 //
-//  Created by Ollie Ford on 22/10/2014.
+//  Created by Ollie Ford on 23/10/2014.
 //  Copyright (c) 2014 OJFord. All rights reserved.
 //
 

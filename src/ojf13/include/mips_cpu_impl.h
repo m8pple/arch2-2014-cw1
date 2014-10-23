@@ -1,5 +1,5 @@
 //
-//  mips_instr.h
+//  mips_cpu_impl.h
 //  MIPSim
 //
 //  Created by Ollie Ford on 22/10/2014.

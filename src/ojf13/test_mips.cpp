@@ -1,12 +1,12 @@
 //
-//  mips_instr.h
+//  test_mips.cpp
 //  MIPSim
 //
 //  Created by Ollie Ford on 22/10/2014.
 //  Copyright (c) 2014 OJFord. All rights reserved.
 //
 
-#include "../../include/mips_test.h"
+#include "mips_test.h"
 #include "include/test_mips.h"
 #include "include/mips_instr.h"
 
