@@ -5,7 +5,11 @@ LOGIN ?= ojf13
 CPPFLAGS += -W -Wall -g
 CPPFLAGS += -I include
 
+<<<<<<< HEAD
 CFLAGS += -std=c99
+=======
+CFLAGS	 += -std=c99
+>>>>>>> bbd17d442e787d30daed02ae898e8ed694a75319
 CXXFLAGS += -std=c++11
 
 # Force the inclusion of C++ standard libraries
