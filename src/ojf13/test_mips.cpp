@@ -11,7 +11,6 @@
 #include "include/mips_instr.h"
 
 #include <random>
-#include <iostream>
 
 mips_instr instrFromAsm(mips_asm mnem){
 	return mipsInstruction[mnem];
@@ -81,8 +80,6 @@ private:
 		_value |= (dreg & MASK_05b) << POS_DREG;
 		_value |= (shft & MASK_05b) << POS_SHFT;
 		_value |= (func & MASK_06b) << POS_FUNC;
-		
-		std::cout << "Creating: " << std::hex << (int)value() << std::endl;
 	}
 	//IType
 	Instruction(unsigned opco,
