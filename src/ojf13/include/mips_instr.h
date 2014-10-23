@@ -21,9 +21,17 @@
 #define POS_DREG    11U
 #define POS_SHFT	06U
 #define POS_FUNC    00U
-
 #define POS_IMDT	00U
 #define POS_TRGT	00U
+
+#define MASK_OPCO	MASK_06b << POS_OPCO
+#define MASK_SREG	MASK_05b << POS_SREG
+#define MASK_TREG	MASK_05b << POS_TREG
+#define MASK_DREG	MASK_05b << POS_DREG
+#define MASK_SHFT	MASK_05b << POS_SHFT
+#define MASK_FUNC	MASK_06b << POS_FUNC
+#define MASK_IMDT	MASK_16b << POS_IMDT
+#define MASK_TRGT	MASK_26b << POS_TRGT
 
 typedef enum _mips_asm{
 	ADD=0,
