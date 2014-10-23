@@ -11,7 +11,7 @@
 #endif
 
 #include "./mips_instr.h"
-#include "mips_mem.h"
+#include "./mips_cpu_mem.h"
 
 typedef enum _mips_cpu_stage{
 	IF	=0,
@@ -67,20 +67,6 @@ public:
 	
 private:
 	mips_reg_sp* _npc;
-};
-
-struct mips_mem{
-public:
-	mips_mem(uint32_t, uint32_t);
-	~mips_mem();
-	
-	void read(uint8_t*, uint32_t, uint32_t) const;
-	void write(uint32_t, uint32_t, const uint8_t*);
-	
-private:
-	uint32_t	_size;
-	uint32_t	_bSize;
-	uint8_t*	_data;
 };
 
 struct mips_cpu{
