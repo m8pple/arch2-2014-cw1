@@ -67,7 +67,7 @@ private:
 
 struct mips_cpu{
 public:
-	mips_cpu(void);
+	mips_cpu(mips_mem_h mem);
 	
 	void reset(void);
 	void step(void);
@@ -82,4 +82,6 @@ private:
 	mips_reg_sp		_hi;
 	mips_reg_sp		_lo;
 	mips_cpu_stage	_stage;
+	
+	mips_mem_h		_mem_ptr;
 };

@@ -66,7 +66,7 @@ void mips_reg_pc::advance(void){
 /*
  * MIPS CPU
  */
-mips_cpu::mips_cpu(void) : r(), _pc(), _stage(IF){};
+mips_cpu::mips_cpu(mips_mem_h mem) : r(), _pc(), _hi(), _lo(), _stage(IF), _mem_ptr(mem){};
 
 void mips_cpu::reset(void){
 	
