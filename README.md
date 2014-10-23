@@ -28,9 +28,9 @@ Coursework Deliverables
 
 There are two C/C++ components to this coursework:
 
-1 - Create a MIPS software simulator
+1. Create a MIPS software simulator
 
-2 - Develop a test suite for your MIPs simulator
+2. Develop a test suite for your MIPS simulator
 
 The API for the simulator is given as a bare C header file,
 defining the functions and data-types involved, along
@@ -44,31 +44,31 @@ you are that way inclined), containing the original directory
 structure and files, as well as the files that you have contributed.
 The two key things you will be adding are:
 
- - src/[your_login]/mips_cpu.c or mips_cpu.cpp
+ - `src/<your_login>/mips_cpu.c` or `mips_cpu.cpp`
  
- - src/[your_login]/test_mips.c or test_mips.cpp
+ - `src/<your_login>/test_mips.c` or `test_mips.cpp`
  
 The first part is the implementation of a mips simulator, and
 is essentially a library that implements the api found in
-include/mips_cpu.h. You can use C or C++, either is fine.
+`include/mips_cpu.h`. You can use C or C++, either is fine.
 If you want to split into multiple files, then feel free to do
-so - anything which matches the pattern src/[your_login]/mips_cpu_*.c
-or src/[your_login]/mips_cpu_*.cpp will also get compiled into
+so - anything which matches the pattern `src/<your_login>/mips_cpu_*.c`
+or `src/<your_login>/mips_cpu_*.cpp` will also get compiled into
 your library. 
 
 The second part is the test suite which will drive your
 simulator and make it do things. This is a C or C++ program
 (so it will have a main function), and should be either
-src/[your_login]/test_mips.c or src/[your_login]/test_mips.cpp.
+`src/<your_login>/test_mips.c` or `src/<your_login>/test_mips.cpp`.
 Again, if you want to split into multiple files, anything
-that matches the pattern src/[your_login]/test_mips_*.c or
-src/[your_login]/test_mips_*.cpp will get compiled into
+that matches the pattern `src/<your_login>/test_mips_*.c` or
+`src/<your_login>/test_mips_*.cpp` will get compiled into
 your program.
 
 You can also add your own private header files (generally
 a good idea), which should be part of the submitted zip file,
 but they don't need to follow any specific pattern. However,
-they should be completely located within the src/[your_login]
+they should be completely located within the `src/<your_login>`
 directory or a sub-directory of it. Note that your simulator
 and your test suite are two different components, so do not
 rely on the specific behaviour of _your_ simulator, it should
@@ -82,7 +82,7 @@ The directory structure should look like:
     +-include
     | |
     | +-mips.h
-    | +-mips_*.h  #Other mips headers
+    | +-mips_*.h  # Other mips headers
     |
     +-src
     | |
@@ -91,7 +91,7 @@ The directory structure should look like:
     | | +-mips_mem_ram.cpp
     | | +-mips_test_framework.cpp
     | |
-    | +-[your_login] # This is your private folder
+    | +-<your_login> # This is your private folder
     |   |
     |   +-mips_cpu.c or mips_cpu.cpp
     |   +-mips_cpu_*.c or mips_cpu_*.cpp (if you want them)
@@ -108,8 +108,8 @@ The directory structure should look like:
     +-(anything else you want, but it won't be available in the environment)
 
 I accept that it is a bit painful making sure you get exactly
-the right base directory in a zip, so during assesment I will
-go looking for mips.h, and will use that to anchor the rest
+the right base directory in a zip, so during assessment I will
+go looking for `mips.h`, and will use that to anchor the rest
 of the directory tree.
 
 Your submitted code will need to work within the
@@ -124,10 +124,10 @@ with it. The given structure allows me to know exactly what
 your code needs in order to compile (I need to tell the compiler
 which source files to link together), and when I want to move
 implementations around I need to know what is important (so
-stuff in src/<your_login>.
+stuff in `src/<your_login>`).
 
-Assessment criterion
---------------------
+Assessment criteria
+-------------------
 
 This is an exercise in both implementing specifications,
 and in testing specifications, so the assessment
@@ -144,7 +144,7 @@ is weighted as follows:
   subset that everyone will be able to get fully working, a larger
   set that most people will be able to get partially working, and some
   instructions that are really quite difficult to get right and many
-  people won't attempt. Some hints on that will apear later.
+  people won't attempt. Some hints on that will appear later.
 
 - 30% Testing: What proportion of the CPU simulator is
   exercised and tested by the submitted test suite? So _if_ an
@@ -166,19 +166,19 @@ is weighted as follows:
 Except for the marks for compilation (where everyone
 should really get full marks, but is down to me assessing
 how much manual work I needed to put in) and bug reports
-(which are subjective and more rare) the assesment is
+(which are subjective and more rare) the assessment is
 entirely quantitative and metric based.
 
 There are two submission deadlines, one soft, one hard:
 
 - Friday 24th October: deadline for formative (ungraded)
-  assesment. If you submit a version by this deadline, it
+  assessment. If you submit a version by this deadline, it
   will be put through a large subset of the assessment. The
   results (but not a grade), will be returned on Monday 27th.
   Submission is not required, but is obviously encouraged.
 
 - Friday 31st October: deadline for summative (graded)
-  assesment. Whether or not you submitted for the previous
+  assessment. Whether or not you submitted for the previous
   deadline, everyone must submit for this deadline. This
   will be the part which results in the grade for this
   coursework.
@@ -258,55 +258,55 @@ based on both how easy it is to implement the base functionality,
 but also how easy it is to deal with, and try to test, corner cases.
 
 
-    Code  |   Meaning                                 | Complexity  
-    --------------------------------------------------|-----------
-    ADD   |  Add (with overflow)                      | 2  XX       
-    ADDI  |  Add immediate (with overflow)            | 2  XX       
-    ADDIU |  Add immediate unsigned (no overflow)     | 2  XX       
-    ADDU  |  Add unsigned (no overflow)               | 1  X        
-    AND   |  Bitwise and                              | 1  X         
-    ANDI  |  Bitwise and immediate                    | 2  XX       
-    BEQ   |  Branch on equal                          | 3  XXX      
-    BGEZ  |  Branch on greater than or equal to zero  | 3  XXX      
-    BGEZAL|  Branch on greater >=0 zero and link      | 4  XXXX     
-    BGTZ  |  Branch on greater than zero              | 3  XXX      
-    BLEZ  |  Branch on less than or equal to zero     | 3  XXX      
-    BLTZ  |  Branch on less than zero                 | 3  XXX      
-    BLTZAL|  Branch on less than zero and link        | 4  XXXX     
-    BNE   |  Branch on not equal                      | 3  XXX      
-    DIV   |  Divide                                   | 4  XXXX     
-    DIVU  |  Divide unsigned                          | 3  XXXX     
-    J     |  Jump                                     | 3  XXX      
-    JAL   |  Jump and link                            | 3  XXXX     
-    JR    |  Jump register                            | 3  XXX      
-    LB    |  Load byte                                | 4  XXX       
-    LBU   |  Load byte unsigned                       | 3  XXX      
-    LUI   |  Load upper immediate                     | 2  XX       
-    LW    |  Load word                                | 2  XX       
-    LWL   |  Load word left                           | 5  XXXXX    
-    LWR   |  Load word right                          | 5  XXXXX    
-    MFHI  |  Move from HI                             | 3  XXXX     
-    MFLO  |  Move from LO                             | 3  XXXX     
-    MULT  |  Multiply                                 | 4  XXXX     
-    MULTU |  Multiply unsigned                        | 3  XXXX     
-    OR    |  Bitwise or                               | 1  X        
-    ORI   |  Bitwise or immediate                     | 2  XX       
-    SB    |  Store byte                               | 3  XXX      
-    SH    |  Store half-word                          | 3  XXX      
-    SLL   |  Shift left logical                       | 2  XX       
-    SLLV  |  Shift left logical variable              | 3  XX       
-    SLT   |  Set on less than (signed)                | 2  XX       
-    SLTI  |  Set on less than immediate (signed)      | 3  XXX       
-    SLTIU |  Set on less than immediate unsigned      | 3  XXX      
-    SLTU  |  Set on less than unsigned                | 1  X        
-    SRA   |  Shift right arithmetic                   | 2  XX       
-    SRL   |  Shift right logical                      | 2  XX       
-    SRLV  |  Shift right logical variable             | 2  XX       
-    SUB   |  Subtract                                 | 2  XX       
-    SUBU  |  Subtract unsigned                        | 1  X        
-    SW    |  Store word                               | 2  XX       
-    XOR   |  Bitwise exclusive or                     | 1  X        
-    XORI  |  Bitwise exclusive or immediate           | 2  XX       
+Code  |   Meaning                                 | Complexity  
+------|-------------------------------------------|-----------
+ADD   |  Add (with overflow)                      | 2  XX       
+ADDI  |  Add immediate (with overflow)            | 2  XX       
+ADDIU |  Add immediate unsigned (no overflow)     | 2  XX       
+ADDU  |  Add unsigned (no overflow)               | 1  X        
+AND   |  Bitwise and                              | 1  X         
+ANDI  |  Bitwise and immediate                    | 2  XX       
+BEQ   |  Branch on equal                          | 3  XXX      
+BGEZ  |  Branch on greater than or equal to zero  | 3  XXX      
+BGEZAL|  Branch on greater than or equal to zero and link  | 4  XXXX
+BGTZ  |  Branch on greater than zero              | 3  XXX      
+BLEZ  |  Branch on less than or equal to zero     | 3  XXX      
+BLTZ  |  Branch on less than zero                 | 3  XXX      
+BLTZAL|  Branch on less than zero and link        | 4  XXXX     
+BNE   |  Branch on not equal                      | 3  XXX      
+DIV   |  Divide                                   | 4  XXXX     
+DIVU  |  Divide unsigned                          | 3  XXXX     
+J     |  Jump                                     | 3  XXX      
+JAL   |  Jump and link                            | 3  XXXX     
+JR    |  Jump register                            | 3  XXX      
+LB    |  Load byte                                | 4  XXX       
+LBU   |  Load byte unsigned                       | 3  XXX      
+LUI   |  Load upper immediate                     | 2  XX       
+LW    |  Load word                                | 2  XX       
+LWL   |  Load word left                           | 5  XXXXX    
+LWR   |  Load word right                          | 5  XXXXX    
+MFHI  |  Move from HI                             | 3  XXXX     
+MFLO  |  Move from LO                             | 3  XXXX     
+MULT  |  Multiply                                 | 4  XXXX     
+MULTU |  Multiply unsigned                        | 3  XXXX     
+OR    |  Bitwise or                               | 1  X        
+ORI   |  Bitwise or immediate                     | 2  XX       
+SB    |  Store byte                               | 3  XXX      
+SH    |  Store half-word                          | 3  XXX      
+SLL   |  Shift left logical                       | 2  XX       
+SLLV  |  Shift left logical variable              | 3  XX       
+SLT   |  Set on less than (signed)                | 2  XX       
+SLTI  |  Set on less than immediate (signed)      | 3  XXX       
+SLTIU |  Set on less than immediate unsigned      | 3  XXX      
+SLTU  |  Set on less than unsigned                | 1  X        
+SRA   |  Shift right arithmetic                   | 2  XX       
+SRL   |  Shift right logical                      | 2  XX       
+SRLV  |  Shift right logical variable             | 2  XX       
+SUB   |  Subtract                                 | 2  XX       
+SUBU  |  Subtract unsigned                        | 1  X        
+SW    |  Store word                               | 2  XX       
+XOR   |  Bitwise exclusive or                     | 1  X        
+XORI  |  Bitwise exclusive or immediate           | 2  XX       
 
 This is not quite an exhaustive list of MIPS-1 instructions
 (as was originally sort of implied). Some were deliberately left out
@@ -336,17 +336,17 @@ and read the entire thing again.
 
 You can get the source code either by:
 
- 1 - Downloading the zip file (see the link on the right hand side),
-     which gives you a snapshot of the files in the repository.
- 
- 2 - Cloning the source code to your local directory, keeping the
-     git information intact. You don't need a github account to do
-     this, and your repository will be private.
+1. Downloading the zip file (see the link on the right hand side),
+   which gives you a snapshot of the files in the repository.
 
- 3 - Fork the code into your own repository. This assumes that you
-     have your own account, and presumably the ability to keep
-     that repository private. See the [Student Pack](https://education.github.com/pack)
-     if you're interested in that direction.
+2. Cloning the source code to your local directory, keeping the
+   git information intact. You don't need a github account to do
+   this, and your repository will be private.
+
+3. Fork the code into your own repository. This assumes that you
+   have your own account, and presumably the ability to keep
+   that repository private. See the [Student Pack](https://education.github.com/pack)
+   if you're interested in that direction.
 
 While it is not required, I would highly recommend that you try
 option 2 (I will use this route in class). It is good to get some
@@ -370,7 +370,7 @@ The submission itself is through blackboard as a zip, so there
 is no requirement to use git. Even if I update the repository,
 you can still just download the zip again and copy your current
 work in - it is deliberately designed so that copying your
-src/<login> directory into the updated source code will work.
+`src/<login>` directory into the updated source code will work.
 
 ### Read the source code
 
@@ -378,14 +378,14 @@ The source code is part of the specification, and is heavily
 documented (it is much more important to document APIs than
 it is to document implementation). Suggested reading order is:
 
- - include/mips.h
- - include/mips_mem.h
- - include/mips_cpu.h
- - include/mips_test.h
+ - `include/mips.h`
+ - `include/mips_mem.h`
+ - `include/mips_cpu.h`
+ - `include/mips_test.h`
 
-*Optional* : The comments follow the format for a well-known tool
+*Optional*: The comments follow the format for a well-known tool
 called [doxygen](http://www.stack.nl/~dimitri/doxygen/). If you
-apply doxygen to the file doc/mips.doygen, then it will generate
+apply doxygen to the file `doc/mips.doygen`, then it will generate
 some nice html formatted API documentation for you.
 
 ### Check you understand MIPS
@@ -396,7 +396,7 @@ discussion of MIPS in the course text book, and the MIPS
 specification itself is available online, for example:
 http://math-atlas.sourceforge.net/devel/assembly/mips-iv.pdf
 There are multiple revisions or extensions of the instruction set,
-so rememer that we are only considering MIPS-1.
+so remember that we are only considering MIPS-1.
 
 I think this is quite a nice break-down of the instructions,
 but be careful about the details:
