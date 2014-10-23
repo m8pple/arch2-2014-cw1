@@ -29,9 +29,9 @@ void mips_register::value(uint32_t iVal){
 /*
  * MIPS GP register
  */
-mips_gp_regs::mips_gp_regs(void) : _r0(false){};
+mips_regset_gp::mips_regset_gp(void) : _r0(false){};
 	
-mips_register&  mips_gp_regs::operator[](int idx){
+mips_register&  mips_regset_gp::operator[](int idx){
 	if(idx >= MIPS_NUM_REG)
 		throw mips_ErrorInvalidArgument;
 	else
@@ -54,19 +54,54 @@ void mips_reg_sp::internal_set(uint32_t iVal){
 //
 
 /*
- * MIPS
+ * MIPS PC register
  */
-mips_reg_pc::mips_reg_pc(void) : mips_reg_sp(){};
+mips_reg_pc::mips_reg_pc(mips_reg_sp* npc) : _npc(npc), mips_reg_sp(){};
 
-void mips_reg_pc::advance(void){
-	internal_set(value()+4);
+void mips_reg_pc::advance(int32_t offset=4){
+	internal_set(_npc->value()+offset);
 }
+//
+
+/*
+ * MIPS memory
+ */
+mips_mem::mips_mem(uint32_t size, uint32_t bSize) : _size(size), _bSize(bSize){
+	_data = new uint8_t[_size];
+};
+
+mips_mem::~mips_mem(){
+	delete[] _data;
+}
+
+void mips_mem::read(uint8_t* obuf, uint32_t addr, uint32_t len) const{
+	if( addr%_bSize || (addr+len)%_bSize )
+		throw mips_ExceptionInvalidAlignment;
+	if( addr+len > _size )
+		throw mips_ExceptionInvalidAddress;
+	
+	for(unsigned i=0; i<len; ++i){
+		*obuf++ = _data[addr+i];
+	}
+}
+
+void mips_mem::write(uint32_t addr, uint32_t len, const uint8_t* ibuf){
+	if( addr%_bSize || (addr+len)%_bSize )
+		throw mips_ExceptionInvalidAlignment;
+	if( addr+len > _size )
+		throw mips_ExceptionInvalidAddress;
+	
+	for(unsigned i=0; i<len; ++i){
+		_data[addr+i] = *ibuf++;
+	}
+}
+
 //
 
 /*
  * MIPS CPU
  */
-mips_cpu::mips_cpu(mips_mem_h mem) : r(), _pc(), _hi(), _lo(), _stage(IF), _mem_ptr(mem){};
+mips_cpu::mips_cpu(mips_mem* mem) : r(), _pc(&_npc), _npc(), _hi(), _lo(), _stage(IF), _mem_ptr(mem){};
 
 void mips_cpu::reset(void){
 	
@@ -81,8 +116,32 @@ void mips_cpu::reset(void){
 }
 
 void mips_cpu::step(void){
-	_pc.internal_set(_pc.value()+4);
-	_pc.advance();
+	uint32_t pcOffset = 4;
+	uint32_t aluOut;
+	
+	fetchInstr();
+	_stage = ID;
+	decode();
+	fetchRegs();
+	_stage = EX;
+	// magic
+	_stage = MEM;
+	// bit less magic
+	bool cond;
+	bool isBranch;
+	if(isBranch){
+		if(cond)
+			pcOffset = aluOut;
+		else
+			pcOffset = 4;
+		
+		//no WB stage for branch
+		_stage = IF;
+		return;
+	}
+	_stage = WB;
+	// more magic
+	_pc.advance(pcOffset);
 }
 
 //make sure we know "we are the CPU" when setting
@@ -92,5 +151,19 @@ void mips_cpu::internal_pc_set(uint32_t iVal){
 
 uint32_t mips_cpu::pc(void) const{
 	return _pc.value();
+}
+
+void mips_cpu::fetchInstr(){
+	uint8_t	buf[4];
+	_mem_ptr->read(buf, pc(), 4);
+	_ir.value((uint32_t)*buf);
+}
+
+void mips_cpu::decode(){
+	
+}
+
+void mips_cpu::fetchRegs(){
+	
 }
 //

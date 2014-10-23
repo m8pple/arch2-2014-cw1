@@ -12,7 +12,7 @@
 struct mips_cpu_impl: mips_cpu{};
 
 mips_cpu_h mips_cpu_create(mips_mem_h mem){
-	return (mips_cpu_h)new mips_cpu((mips_mem_h)mem);
+	return (mips_cpu_h)new mips_cpu((mips_mem*)mem);
 }
 
 mips_error mips_cpu_reset(mips_cpu_h cpu){

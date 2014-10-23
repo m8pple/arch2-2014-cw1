@@ -10,6 +10,9 @@
 #define MIPS_NUM_REG 32U
 #endif
 
+#include "./mips_instr.h"
+#include "mips_mem.h"
+
 typedef enum _mips_cpu_stage{
 	IF	=0,
 	ID	=1,
@@ -21,10 +24,10 @@ typedef enum _mips_cpu_stage{
 struct mips_register{
 public:
 	mips_register(void);
-	mips_register(bool isZero);
+	mips_register(bool);
 	
 	uint32_t value(void) const;
-	void value(uint32_t iVal);
+	void value(uint32_t);
 	
 protected:
 	uint32_t _value;
@@ -33,11 +36,11 @@ private:
 	bool _allowSet;
 };
 
-struct mips_gp_regs{
+struct mips_regset_gp{
 public:
-	mips_gp_regs(void);
+	mips_regset_gp(void);
 	
-	mips_register& operator[](int idx);
+	mips_register& operator[](int);
 	
 private:
 	mips_register _r0;
@@ -51,37 +54,61 @@ public:
 	using mips_register::value;
 	//make sure we know "we are the CPU" when setting
 	void value(uint32_t) const;
-	void internal_set(uint32_t iVal);
+	void internal_set(uint32_t);
 	
 private:
 };
 
 struct mips_reg_pc: mips_reg_sp{
 public:
-	mips_reg_pc(void);
+	mips_reg_pc(mips_reg_sp*);
 	
-	void advance(void);
+	void advance(int32_t);
 	
 private:
+	mips_reg_sp* _npc;
+};
+
+struct mips_mem{
+public:
+	mips_mem(uint32_t, uint32_t);
+	~mips_mem();
+	
+	void read(uint8_t*, uint32_t, uint32_t) const;
+	void write(uint32_t, uint32_t, const uint8_t*);
+	
+private:
+	uint32_t	_size;
+	uint32_t	_bSize;
+	uint8_t*	_data;
 };
 
 struct mips_cpu{
 public:
-	mips_cpu(mips_mem_h mem);
+	mips_cpu(mips_mem*);
 	
 	void reset(void);
 	void step(void);
 	//make sure we know "we are the CPU" when setting
-	void internal_pc_set(uint32_t iVal);
+	void internal_pc_set(uint32_t);
 	uint32_t pc(void) const;
 	
-	mips_gp_regs	r;
+	mips_regset_gp	r;
 	
-private:
+protected:
+	void fetchInstr(void);
+	void decode(void);
+	void fetchRegs(void);
+	
 	mips_reg_pc		_pc;
+	mips_reg_sp		_npc;
+	mips_reg_sp		_ir;
 	mips_reg_sp		_hi;
 	mips_reg_sp		_lo;
 	mips_cpu_stage	_stage;
 	
-	mips_mem_h		_mem_ptr;
+	mips_mem*		_mem_ptr;
+	
+private:
+	mips_instr		_irDecoded;
 };
