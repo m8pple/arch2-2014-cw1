@@ -7,7 +7,7 @@
 //
 
 #include "mips.h"
-#include "include/mips_cpu_impl.h"
+#include "include/mips_cpu.h"
 
 struct mips_cpu_impl: mips_cpu{};
 

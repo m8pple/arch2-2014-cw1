@@ -6,7 +6,7 @@
 //  Copyright (c) 2014 OJFord. All rights reserved.
 //
 
-#include "include/mips_cpu_impl.h"
+#include "include/mips_cpu.h"
 
 /*
  * MIPS register
