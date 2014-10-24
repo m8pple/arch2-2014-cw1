@@ -92,14 +92,20 @@ protected:
 	void fetchRegs(void);
 	
 	mips_reg_pc		_pc;
+	
 	mips_reg_sp		_npc;
+	mips_reg_sp		_a;
+	mips_reg_sp		_b;
+	mips_reg_sp		_imm;
+	
 	mips_reg_sp		_ir;
 	mips_reg_sp		_hi;
 	mips_reg_sp		_lo;
+
 	mips_cpu_stage	_stage;
 	
 	mips_mem*		_mem_ptr;
 	
 private:
-	mips_instr		_irDecoded;
+	Instruction*	_irDecoded;
 };

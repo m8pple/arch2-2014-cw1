@@ -122,27 +122,34 @@ void mips_cpu::fetchInstr(){
 }
 
 void mips_cpu::decode(){
-	Instruction ir(_ir.value());
+	Instruction *ir = new Instruction(_ir.value());
 	
 	for(int i=0; i<NUM_INSTR; ++i){
-		if(		mipsInstruction[i].opco == ir.opcode()
-		   &&(	(	mipsInstruction[i].type == RType
-				 &&	mipsInstruction[i].func == ir.function())
-			  ||	(	mipsInstruction[i].type != RType
-					 &&	mipsInstruction[i].func == FIELD_NOT_EXIST)
-			  || (	mipsInstruction[i].type == IType
-				  &&	mipsInstruction[i].func == ir.regT())
-			  )){
-			   
-			ir.setDecoded((mips_asm)i, mipsInstruction[i].type);
+		if(	mipsInstruction[i].opco == ir->opcode() && (
+			(	mipsInstruction[i].type == RType
+			 &&	mipsInstruction[i].func == ir->function() )
+		  ||(	mipsInstruction[i].type != RType
+			 &&	mipsInstruction[i].func == FIELD_NOT_EXIST)
+		  ||(	mipsInstruction[i].type == IType
+			 &&	mipsInstruction[i].func == ir->regT())
+		)){
+			ir->setDecoded((mips_asm)i, mipsInstruction[i].type);
+			_irDecoded = ir;
 			return;
 		}
 	}
 	//no match
+	
 	throw mips_ExceptionInvalidInstruction;
 }
 
 void mips_cpu::fetchRegs(){
-	
+	_a.value(_irDecoded->regS());
+	_b.value(_irDecoded->regT());
+	bool isSigned = (_irDecoded->immediate()&(MASK_IMDT>>1))
+						!=	(_irDecoded->immediate()&(MASK_IMDT));
+	_imm.value( isSigned
+			   ?	_irDecoded->immediate()|(0xFFFFFFFF&~MASK_IMDT)
+			   :	_irDecoded->immediate());
 }
 //
