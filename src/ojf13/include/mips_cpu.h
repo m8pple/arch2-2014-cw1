@@ -180,7 +180,6 @@ protected:
 	mips_alu		_alu;
 	
 	mips_reg_pc		_pc;
-	
 	mips_reg_sp		_npc;
 	
 	mips_reg_sp		_ir;

@@ -70,6 +70,49 @@ void mips_alu::setOperation(mips_asm mnem){
 void mips_alu::execute(uint32_t* out) const{
 	*out = _operation(*in_a, *in_b);
 }
+
+uint32_t mips_alu::alu_add(uint32_t a, uint32_t b){
+	return (int32_t)a+(int32_t)b;
+}
+uint32_t mips_alu::alu_addu(uint32_t a, uint32_t b){
+	return a+b;
+}
+uint32_t mips_alu::alu_and(uint32_t a, uint32_t b){
+	return a&b;
+}
+uint32_t mips_alu::alu_divide(uint32_t a, uint32_t b){
+	throw mips_ErrorNotImplemented;
+}
+uint32_t mips_alu::alu_divideu(uint32_t a, uint32_t b){
+	throw mips_ErrorNotImplemented;
+}
+uint32_t mips_alu::alu_or(uint32_t a, uint32_t b){
+	return a|b;
+}
+uint32_t mips_alu::alu_multiply(uint32_t a, uint32_t b){
+	throw mips_ErrorNotImplemented;
+}
+uint32_t mips_alu::alu_multiplyu(uint32_t a, uint32_t b){
+	throw mips_ErrorNotImplemented;
+}
+uint32_t mips_alu::alu_shiftleft(uint32_t a, uint32_t b){
+	return a<<b;
+}
+uint32_t mips_alu::alu_sub(uint32_t a, uint32_t b){
+	return (int32_t)a-(int32_t)b;
+}
+uint32_t mips_alu::alu_subu(uint32_t a, uint32_t b){
+	return a-b;
+}
+uint32_t mips_alu::alu_shiftright(uint32_t a, uint32_t b){
+	return ((int32_t)a)>>b;
+}
+uint32_t mips_alu::alu_shiftrightu(uint32_t a, uint32_t b){
+	return a>>b;
+}
+uint32_t mips_alu::alu_xor(uint32_t a, uint32_t b){
+	return a^b;
+}
 //
 
 /*
