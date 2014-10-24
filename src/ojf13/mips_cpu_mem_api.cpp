@@ -6,7 +6,6 @@
 //  Copyright (c) 2014 OJFord. All rights reserved.
 //
 
-#include "mips.h"
 #include "include/mips_cpu_mem.h"
 
 mips_error mips_mem_read(const mips_mem_h mem, uint32_t addr,  uint32_t len, uint8_t *obuf){

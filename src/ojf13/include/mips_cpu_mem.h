@@ -6,6 +6,8 @@
 //  Copyright (c) 2014 OJFord. All rights reserved.
 //
 
+#include "mips_mem.h"
+
 struct mips_mem{
 public:
 	mips_mem(uint32_t, uint32_t);

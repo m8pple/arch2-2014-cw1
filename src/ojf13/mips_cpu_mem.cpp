@@ -6,7 +6,6 @@
 //  Copyright (c) 2014 OJFord. All rights reserved.
 //
 
-#include "mips.h"
 #include "include/mips_cpu_mem.h"
 
 /*
