@@ -12,93 +12,6 @@
 
 #include <random>
 
-mips_instr instrFromAsm(mips_asm mnem){
-	return mipsInstruction[mnem];
-}
-
-struct Instruction{
-public:
-	//RType
-	Instruction(mips_asm mnem,
-				unsigned sreg, unsigned treg, unsigned dreg,
-				unsigned shft) :
-	Instruction(mipsInstruction[mnem].opco,
-				sreg, treg, dreg,
-				shft, mipsInstruction[mnem].func){
-		
-		_mnem=mnem;
-		if( mipsInstruction[mnem].type != RType )
-			throw mips_ExceptionInvalidInstruction;
-	}
-	
-	//IType
-	Instruction(mips_asm mnem,
-		  unsigned sreg, unsigned treg,
-		  unsigned imdt) :
-	Instruction(mipsInstruction[mnem].opco,
-				sreg, mipsInstruction[mnem].func?mipsInstruction[mnem].func:treg,
-				imdt){
-		
-		_mnem=mnem;
-		if( mipsInstruction[mnem].type != IType )
-			throw mips_ExceptionInvalidInstruction;
-	}
-	
-	//JType
-	Instruction(mips_asm mnem,
-				unsigned trgt) :
-	Instruction(mipsInstruction[mnem].opco, trgt){
-		
-		_mnem=mnem;
-		if( mipsInstruction[mnem].type != JType )
-			throw mips_ExceptionInvalidInstruction;
-	}
-	
-	uint8_t* bytes() const{
-		uint8_t *obuf = new uint8_t[4];
-		for(int i=0; i<4; ++i)
-			obuf[i] = (_value & (MASK_08b << 8*(3-i))) >> 8*(3-i);
-		return obuf;
-	}
-	
-	uint32_t value() const{
-		return _value;
-	}
-	
-	mips_asm mnem() const{
-		return _mnem;
-	}
-
-private:
-	//RType
-	Instruction(unsigned opco,
-				unsigned sreg, unsigned treg, unsigned dreg,
-				unsigned shft, unsigned func) : _value(0){
-		_value |= (opco & MASK_06b) << POS_OPCO;
-		_value |= (sreg & MASK_05b) << POS_SREG;
-		_value |= (treg & MASK_05b) << POS_TREG;
-		_value |= (dreg & MASK_05b) << POS_DREG;
-		_value |= (shft & MASK_05b) << POS_SHFT;
-		_value |= (func & MASK_06b) << POS_FUNC;
-	}
-	//IType
-	Instruction(unsigned opco,
-		  unsigned sreg, unsigned treg,
-		  unsigned imdt) : _value(0){
-		_value |= (opco & MASK_06b) << POS_OPCO;
-		_value |= (sreg & MASK_05b) << POS_SREG;
-		_value |= (treg & MASK_05b) << POS_TREG;
-		_value |= (imdt & MASK_16b) << POS_IMDT;
-	}
-	//JType
-	Instruction(unsigned opco, unsigned trgt) : _value(0){
-		_value |= (opco & MASK_06b) << POS_OPCO;
-		_value |= (trgt & MASK_26b) << POS_TRGT;
-	}
-	uint32_t _value;
-	mips_asm _mnem;
-};
-
 int main(){
     mips_mem_h mem = mips_mem_create_ram(1<<5, 4);
     mips_cpu_h cpu = mips_cpu_create(mem);
@@ -174,7 +87,7 @@ testResult memoryIO(mips_cpu_h cpu, mips_mem_h mem){
 testResult rTypeAnd(mips_cpu_h cpu, mips_mem_h mem){
 	mips_cpu_set_register(cpu, 1, 0x00FF00F0);
 	mips_cpu_set_register(cpu, 2, 0x000F0F0F);
-	mips_mem_write(mem, 0x0, 4, Instruction(AND, 1, 2, 3, 0).bytes());
+	mips_mem_write(mem, 0x0, 4, Instruction(AND, 1, 2, 3, 0).bufferedVal());
 	
 	mips_cpu_set_pc(cpu, 0);
 	mips_cpu_step(cpu);
