@@ -6,10 +6,7 @@
 //  Copyright (c) 2014 OJFord. All rights reserved.
 //
 
-#include "mips.h"
 #include "include/mips_cpu_impl.h"
-
-#include <iostream>
 
 /*
  * MIPS register
@@ -125,7 +122,24 @@ void mips_cpu::fetchInstr(){
 }
 
 void mips_cpu::decode(){
+	Instruction ir(_ir.value());
 	
+	for(int i=0; i<NUM_INSTR; ++i){
+		if(		mipsInstruction[i].opco == ir.opcode()
+		   &&(	(	mipsInstruction[i].type == RType
+				 &&	mipsInstruction[i].func == ir.function())
+			  ||	(	mipsInstruction[i].type != RType
+					 &&	mipsInstruction[i].func == FIELD_NOT_EXIST)
+			  || (	mipsInstruction[i].type == IType
+				  &&	mipsInstruction[i].func == ir.regT())
+			  )){
+			   
+			ir.setDecoded((mips_asm)i, mipsInstruction[i].type);
+			return;
+		}
+	}
+	//no match
+	throw mips_ExceptionInvalidInstruction;
 }
 
 void mips_cpu::fetchRegs(){
