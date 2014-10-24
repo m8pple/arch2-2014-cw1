@@ -16,7 +16,7 @@ struct testResult{
     int passed;
 };
 
-void runTest(testResult test(mips_cpu_h, mips_mem_h), mips_cpu_h, mips_mem_h);
+void runTest(testResult (mips_cpu_h, mips_mem_h), mips_cpu_h, mips_mem_h);
 testResult registerReset(mips_cpu_h, mips_mem_h);
 testResult memoryIO(mips_cpu_h, mips_mem_h);
 testResult rTypeAnd(mips_cpu_h, mips_mem_h);
