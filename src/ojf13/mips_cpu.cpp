@@ -61,6 +61,18 @@ void mips_reg_pc::advance(int32_t offset=4){
 //
 
 /*
+ * MIPS ALU
+ */
+void mips_alu::setOperation(mips_asm mnem){
+	_operation = aluOp[mnem];
+}
+
+void mips_alu::execute(uint32_t* out) const{
+	*out = _operation(*in_a, *in_b);
+}
+//
+
+/*
  * MIPS CPU
  */
 mips_cpu::mips_cpu(mips_mem* mem) : r(), _pc(&_npc), _npc(), _hi(), _lo(), _stage(IF), _mem_ptr(mem){};
@@ -80,14 +92,22 @@ void mips_cpu::reset(void){
 void mips_cpu::step(void){
 	uint32_t pcOffset = 4;
 	uint32_t aluOut;
+	uint32_t aluInA, aluInB;
 	
 	fetchInstr();
+	_npc.value(pc()+4);
+	
 	_stage = ID;
+	
 	decode();
-	fetchRegs();
+	fetchRegs(&aluInA, &aluInB);
+	
 	_stage = EX;
+	
 	// magic
+	
 	_stage = MEM;
+	
 	// bit less magic
 	bool cond;
 	bool isBranch;
@@ -101,7 +121,9 @@ void mips_cpu::step(void){
 		_stage = IF;
 		return;
 	}
+	
 	_stage = WB;
+	
 	// more magic
 	_pc.advance(pcOffset);
 }
@@ -135,6 +157,8 @@ void mips_cpu::decode(){
 		)){
 			ir->setDecoded((mips_asm)i, mipsInstruction[i].type);
 			_irDecoded = ir;
+			
+			_alu.setOperation((mips_asm)i);
 			return;
 		}
 	}
@@ -143,13 +167,39 @@ void mips_cpu::decode(){
 	throw mips_ExceptionInvalidInstruction;
 }
 
-void mips_cpu::fetchRegs(){
-	_a.value(_irDecoded->regS());
-	_b.value(_irDecoded->regT());
-	bool isSigned = (_irDecoded->immediate()&(MASK_IMDT>>1))
-						!=	(_irDecoded->immediate()&(MASK_IMDT));
-	_imm.value( isSigned
-			   ?	_irDecoded->immediate()|(0xFFFFFFFF&~MASK_IMDT)
-			   :	_irDecoded->immediate());
+void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
+	mips_instr_type type = _irDecoded->type();
+	bool isSigned;
+	
+	//Immediate
+	if( type == IType ){
+		
+	}
+	
+	//ALU inputs
+	switch(type){
+		case RType:
+			*aluInA = _irDecoded->regS();
+			*aluInB = _irDecoded->regT();	//this should be shifted?
+			break;
+		
+		case IType:
+			*aluInA = _irDecoded->regS();
+			isSigned = (_irDecoded->immediate()&(MASK_IMDT>>1))
+							!=	(_irDecoded->immediate()&(MASK_IMDT));
+			*aluInB = isSigned
+						?	_irDecoded->immediate()|(0xFFFFFFFF&~MASK_IMDT)
+						:	_irDecoded->immediate();
+			break;
+		
+		case JType:
+			*aluInA = pc()&0xf0000000;
+			*aluInB = _irDecoded->target()<<2;
+			break;
+		
+		default:
+			throw mips_InternalError;
+	}
+	
 }
 //

@@ -7,7 +7,11 @@
 //
 
 #ifndef MIPS_NUM_REG
-#define MIPS_NUM_REG 32U
+#define MIPS_NUM_REG	32U
+#endif
+
+#ifndef NUM_ALU_OPS
+#define NUM_ALU_OPS		02U
 #endif
 
 #if DEBUG==1	//Xcode doesn't want me to put ojf13/ on the path..
@@ -74,6 +78,88 @@ private:
 	mips_reg_sp* _npc;
 };
 
+
+typedef uint32_t (*ALU_OP)(uint32_t, uint32_t);
+
+struct mips_alu{
+public:
+	void execute(uint32_t*) const;
+	
+	void setOperation(mips_asm);
+	
+	uint32_t* in_a;
+	uint32_t* in_b;
+	
+	//Index in with mips_asm enum type
+	const ALU_OP aluOp[NUM_INSTR] = {
+		alu_add,		//ADD
+		alu_add,		//ADDI is just different input
+		alu_addu,		//ADDIU
+		alu_addu,		//ADDU " "
+		alu_and,		//AND
+		alu_and,		//ANDI " "
+		alu_addu,		//BEQ
+		alu_addu,		//BGEZ
+		alu_addu,		//BGEZAL
+		alu_addu,		//BGTZ		branches all do aluout <- npc+imm
+		alu_addu,		//BLEZ
+		alu_addu,		//BLTZ
+		alu_addu,		//BLTZAL
+		alu_addu,		//BNE
+		alu_divide,		//DIV
+		alu_divideu,	//DIVU
+		alu_or,			//J does PC<- PC[31..28] || trgt<<2
+		alu_or,			//JAL " "
+		alu_add,		//JR has treg:=0 so we do npc<-sreg+0
+		alu_add,		//LB does treg <- mem[ sreg+imm ]
+		alu_add,		//LBU " " (output not sign extended)
+		alu_or,			//LUI does treg<- imm<<16 || 0x0
+		alu_add,		//LW
+		alu_add,		//LWL
+		alu_add,		//LWR
+		nullptr,		//MFHI
+		nullptr,		//MFLO
+		alu_multiply,	//MULT
+		alu_multiplyu,	//MULTU
+		alu_or,			//OR
+		alu_or,			//ORI
+		alu_add,		//SB as LB
+		alu_add,		//SH
+		alu_shiftleft,	//SLL
+		alu_shiftleft,	//SLLV
+		alu_sub,		//SLT
+		alu_sub,		//SLTI
+		alu_subu,		//SLTIU
+		alu_subu,		//SLTU
+		alu_shiftright,	//SRA
+		alu_shiftrightu,//SRL
+		alu_shiftrightu,//SRLV
+		alu_sub,		//SUB
+		alu_subu,		//SUBU
+		alu_add,		//SW
+		alu_xor,		//XOR
+		alu_xor,		//XORI
+	};
+	
+private:
+	ALU_OP _operation;
+	
+	static uint32_t alu_add(uint32_t, uint32_t);
+	static uint32_t alu_addu(uint32_t, uint32_t);
+	static uint32_t alu_and(uint32_t, uint32_t);
+	static uint32_t alu_divide(uint32_t, uint32_t);
+	static uint32_t alu_divideu(uint32_t, uint32_t);
+	static uint32_t alu_or(uint32_t, uint32_t);
+	static uint32_t alu_multiply(uint32_t, uint32_t);
+	static uint32_t alu_multiplyu(uint32_t, uint32_t);
+	static uint32_t alu_shiftleft(uint32_t, uint32_t);
+	static uint32_t alu_sub(uint32_t, uint32_t);
+	static uint32_t alu_subu(uint32_t, uint32_t);
+	static uint32_t alu_shiftright(uint32_t, uint32_t);
+	static uint32_t alu_shiftrightu(uint32_t, uint32_t);
+	static uint32_t alu_xor(uint32_t, uint32_t);
+};
+
 struct mips_cpu{
 public:
 	mips_cpu(mips_mem*);
@@ -89,14 +175,13 @@ public:
 protected:
 	void fetchInstr(void);
 	void decode(void);
-	void fetchRegs(void);
+	void fetchRegs(uint32_t*, uint32_t*);
+	
+	mips_alu		_alu;
 	
 	mips_reg_pc		_pc;
 	
 	mips_reg_sp		_npc;
-	mips_reg_sp		_a;
-	mips_reg_sp		_b;
-	mips_reg_sp		_imm;
 	
 	mips_reg_sp		_ir;
 	mips_reg_sp		_hi;
