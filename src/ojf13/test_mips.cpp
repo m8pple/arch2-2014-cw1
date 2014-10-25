@@ -18,12 +18,9 @@ int main(){
     
     mips_test_begin_suite();
 
-	runTest(registerReset, cpu, mem);
-	runTest(memoryIO, cpu, mem);
-    runTest(rTypeAndResult, cpu, mem);
-	runTest(rTypeAndInputs, cpu, mem);
+	for(int i=0; i<NUM_TESTS; ++i)
+		runTest(tests[i], cpu, mem);
 	
-    
     mips_test_end_suite();
 	
     mips_cpu_free(cpu);
@@ -84,8 +81,8 @@ testResult memoryIO(mips_cpu_h cpu, mips_mem_h mem){
 	
 	return {"<INTERNAL>", "Check can read same value back after write.", correct};
 }
-#include <iostream>
-testResult rTypeAndResult(mips_cpu_h cpu, mips_mem_h mem){
+
+testResult ANDResult(mips_cpu_h cpu, mips_mem_h mem){
 	mips_cpu_set_register(cpu, 1, 0x00FF00F0);
 	mips_cpu_set_register(cpu, 2, 0x000F0F0F);
 	mips_mem_write(mem, 0x0, 4, Instruction(AND, 1, 2, 3, 0).bufferedVal());
@@ -99,7 +96,7 @@ testResult rTypeAndResult(mips_cpu_h cpu, mips_mem_h mem){
     return {"AND", "Check result of AND-ing.", correct};
 }
 
-testResult rTypeAndInputs(mips_cpu_h cpu, mips_mem_h mem){
+testResult ANDInputs(mips_cpu_h cpu, mips_mem_h mem){
 	mips_cpu_set_register(cpu, 1, 0x00FF00F0);
 	mips_cpu_set_register(cpu, 2, 0x000F0F0F);
 	mips_mem_write(mem, 0x0, 4, Instruction(AND, 1, 2, 3, 0).bufferedVal());
@@ -111,6 +108,6 @@ testResult rTypeAndInputs(mips_cpu_h cpu, mips_mem_h mem){
 	mips_cpu_get_register(cpu, 1, &r1);
 	mips_cpu_get_register(cpu, 2, &r2);
 	int correct = 1 && (r1==0x00FF00F0) && (r2==0x000F0F0F);
-	std::cout<<r1<<std::endl<<r2<<std::endl;
 	return {"AND", "Check input registers unchanged after AND-ing.", correct};
 }
+
