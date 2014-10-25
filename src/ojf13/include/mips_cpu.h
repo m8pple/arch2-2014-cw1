@@ -170,8 +170,10 @@ protected:
 	void fetchInstr(void);
 	void decode(void);
 	void fetchRegs(uint32_t*, uint32_t*);
+	void accessMem(const uint32_t*);
 	
 	void link(void);
+	uint32_t signExtendImdt(uint16_t);
 	
 	mips_alu		_alu;
 	
