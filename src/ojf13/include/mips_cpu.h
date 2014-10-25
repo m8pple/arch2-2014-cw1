@@ -175,6 +175,8 @@ protected:
 	void decode(void);
 	void fetchRegs(uint32_t*, uint32_t*);
 	
+	void link(void);
+	
 	mips_alu		_alu;
 	
 	mips_reg_pc		_pc;

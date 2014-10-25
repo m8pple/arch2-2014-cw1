@@ -154,22 +154,54 @@ void mips_cpu::step(void){
 	
 	_stage = MEM;
 	// bit less magic
-	bool cond;
 	switch(_irDecoded->mnemonic()){
 		//branch
 		case BEQ:
+			aluOut ? _pc.advance() : _pc.advance(aluOut);
+			//branch has no WB stage
+			_stage = IF;
+			return;
 		case BGEZ:
+			~(aluOut&0x80000000) ? _pc.advance(aluOut) : _pc.advance();
+			_stage = IF;
+			return;
 		case BGEZAL:
-		case BGTZ:
-		case BLEZ:
-		case BLTZ:
-		case BLTZAL:
-		case BNE:
-			if(cond)
+			if(~aluOut&0x7FFFFFFF){
 				_pc.advance(aluOut);
-			else
+				link();
+			} else{
 				_pc.advance();
-			//no WB stage for branch
+			}
+			_stage = IF;
+			return;
+		case BGTZ:
+			if(~(aluOut&0x80000000)){
+				_pc.advance(aluOut);
+				link();
+			} else{
+				_pc.advance();
+			}
+			_stage = IF;
+			return;
+		case BLEZ:
+			aluOut&0x7FFFFFFF ? _pc.advance(aluOut) : _pc.advance();
+			_stage = IF;
+			return;
+		case BLTZ:
+			aluOut&0x7FFFFFFF && ~aluOut ? _pc.advance(aluOut) : _pc.advance();
+			_stage = IF;
+			return;
+		case BLTZAL:
+			if(aluOut&0x7FFFFFFF && ~aluOut){
+				_pc.advance(aluOut);
+				link();
+			} else{
+				_pc.advance();
+			}
+			_stage = IF;
+			return;
+		case BNE:
+			aluOut ? _pc.advance(aluOut) : _pc.advance();
 			_stage = IF;
 			return;
 		
@@ -273,7 +305,7 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 	switch(type){
 		case RType:
 			*aluInA = r[ _irDecoded->regS() ].value();
-			*aluInB = r[ _irDecoded->regT() ].value();	//this should be shifted?
+			*aluInB = r[ _irDecoded->regT() ].value() << _irDecoded->shift();
 			break;
 		
 		case IType:
@@ -296,5 +328,9 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 	
 	std::cout << "Set ALU input A to: 0x" << std::hex << *aluInA << std::endl;
 	std::cout << "Set ALU input B to: 0x" << std::hex << *aluInB << std::endl;
+}
+
+void mips_cpu::link(void){
+	r[31].value(_npc.value()+4);
 }
 //
