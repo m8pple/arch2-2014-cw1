@@ -19,4 +19,5 @@ struct testResult{
 void runTest(testResult (mips_cpu_h, mips_mem_h), mips_cpu_h, mips_mem_h);
 testResult registerReset(mips_cpu_h, mips_mem_h);
 testResult memoryIO(mips_cpu_h, mips_mem_h);
-testResult rTypeAnd(mips_cpu_h, mips_mem_h);
+testResult rTypeAndResult(mips_cpu_h, mips_mem_h);
+testResult rTypeAndInputs(mips_cpu_h, mips_mem_h);
