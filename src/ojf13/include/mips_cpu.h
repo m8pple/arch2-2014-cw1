@@ -10,10 +10,6 @@
 #define MIPS_NUM_REG	32U
 #endif
 
-#ifndef NUM_ALU_OPS
-#define NUM_ALU_OPS		02U
-#endif
-
 #if DEBUG==1	//Xcode doesn't want me to put ojf13/ on the path..
 #include "mips_instr.h"
 #include "mips_cpu_mem.h"
