@@ -97,58 +97,59 @@ struct mips_instr{
 	mips_instr_type	type;
 	uint32_t		opco;
 	int32_t			func;	//RType func, or IType branch treg -1 for none
+	const char*		mnem;
 };
 
 typedef enum _fields{ FIELD_NOT_EXIST=-1 }fields;
 
 const mips_instr mipsInstruction[NUM_INSTR] = {
-	{ RType, 0,							1<<5					},	//ADD
-	{ IType, 1<<3,						FIELD_NOT_EXIST			},	//ADDI
-	{ IType, 1<<3 | 1,					FIELD_NOT_EXIST			},	//ADDIU
-	{ RType, 0,							1<<5 | 1				},	//ADDU
-	{ RType, 0,							1<<5 | 1<<2				},	//AND
-	{ IType, 1<<3 | 1<<2,				FIELD_NOT_EXIST			},	//ANDI
-	{ IType, 1<<2,						FIELD_NOT_EXIST			},	//BEQ
-	{ IType, 1,							1						},	//BGEZ
-	{ IType, 1,							1<<4 | 1				},	//BGEZAL
-	{ IType, 1<<2 | 1<<1 | 1,			0						},	//BGTZ
-	{ IType, 1<<2 | 1<<1,				0						},	//BLEZ
-	{ IType, 1,							0						},	//BLTZ
-	{ IType, 1,							1<<4					},	//BLTZAL
-	{ IType, 1<<2 | 1,					FIELD_NOT_EXIST			},	//BNE
-	{ RType, 0,							1<<4 | 1<<3 | 1<<1		},	//DIV
-	{ RType, 0,							1<<4 | 1<<3 | 1<<1 | 1	},	//DIVU
-	{ JType, 1<<1,						FIELD_NOT_EXIST			},	//J
-	{ JType, 1<<1 | 1,					FIELD_NOT_EXIST			},	//JAL
-	{ RType, 0,							1<<3					},	//JR
-	{ IType, 1<<5,						FIELD_NOT_EXIST			},	//LB
-	{ IType, 1<<5 | 1<<2,				FIELD_NOT_EXIST			},	//LBU
-	{ IType, 1<<3 | 1<<2 | 1<<1 | 1,	FIELD_NOT_EXIST			},	//LUI
-	{ IType, 1<<5 | 1<<1 | 1,			FIELD_NOT_EXIST			},	//LW
-	{ IType, 1<<5 | 1<<1,				FIELD_NOT_EXIST			},	//LWL
-	{ IType, 1<<5 | 1<<2 | 1<<1,		FIELD_NOT_EXIST			},	//LWR
-	{ RType, 0,							1<<4					},	//MFHI
-	{ RType, 0,							1<<4 | 1<<1				},	//MFLO
-	{ RType, 0,							1<<4 | 1<<3				},	//MULT
-	{ RType, 0,							1<<4 | 1<<3 | 1			},	//MULTU
-	{ RType, 0,							1<<5 | 1<<2 | 1			},	//OR
-	{ IType, 1<<3 | 1<<2 | 1,			FIELD_NOT_EXIST			},	//ORI
-	{ IType, 1<<5 | 1<<3,				FIELD_NOT_EXIST			},	//SB
-	{ IType, 1<<5 | 1<<3 | 1,			FIELD_NOT_EXIST			},	//SH
-	{ RType, 0,							0						},	//SLL
-	{ RType, 0,							1<<2					},	//SLLV
-	{ RType, 0,							1<<5 | 1<<3 | 1<<1		},	//SLT
-	{ IType, 1<<3 | 1<<1,				FIELD_NOT_EXIST			},	//SLTI
-	{ IType, 1<<3 | 1<<1 | 1,			FIELD_NOT_EXIST			},	//SLTIU
-	{ RType, 0,							1<<5 | 1<<3 | 1<<1 | 1	},	//SLTU
-	{ RType, 0,							1<<1 | 1				},	//SRA
-	{ RType, 0,							1<<1					},	//SRL
-	{ RType, 0,							1<<2 | 1<<1				},	//SRLV
-	{ RType, 0,							1<<5 | 1<<1				},	//SUB
-	{ RType, 0,							1<<5 | 1<<1 | 1			},	//SUBU
-	{ IType, 1<<5 | 1<<3 | 1<<1 | 1,	FIELD_NOT_EXIST			},	//SW
-	{ RType, 0,							1<<5 | 1<<2 | 1<<1		},	//XOR
-	{ IType, 1<<3 | 1<<2 | 1<<1,		FIELD_NOT_EXIST			}	//XORI
+	{ RType, 0,							1<<5,					"ADD"	},
+	{ IType, 1<<3,						FIELD_NOT_EXIST,		"ADDI"	},
+	{ IType, 1<<3 | 1,					FIELD_NOT_EXIST,		"ADDIU"	},
+	{ RType, 0,							1<<5 | 1,				"ADDU"	},
+	{ RType, 0,							1<<5 | 1<<2,			"AND"	},
+	{ IType, 1<<3 | 1<<2,				FIELD_NOT_EXIST,		"ANDI"	},
+	{ IType, 1<<2,						FIELD_NOT_EXIST,		"BEQ"	},
+	{ IType, 1,							1,						"BGEZ"	},
+	{ IType, 1,							1<<4 | 1,				"BGEZAL"},
+	{ IType, 1<<2 | 1<<1 | 1,			0,						"BGTZ"	},
+	{ IType, 1<<2 | 1<<1,				0,						"BLEZ"	},
+	{ IType, 1,							0,						"BLTZ"	},
+	{ IType, 1,							1<<4,					"BLTZAL"},
+	{ IType, 1<<2 | 1,					FIELD_NOT_EXIST,		"BNE"	},
+	{ RType, 0,							1<<4 | 1<<3 | 1<<1,		"DIV"	},
+	{ RType, 0,							1<<4 | 1<<3 | 1<<1 | 1,	"DIVU"	},
+	{ JType, 1<<1,						FIELD_NOT_EXIST,		"J"		},
+	{ JType, 1<<1 | 1,					FIELD_NOT_EXIST,		"JAL"	},
+	{ RType, 0,							1<<3,					"JR"	},
+	{ IType, 1<<5,						FIELD_NOT_EXIST,		"LB"	},
+	{ IType, 1<<5 | 1<<2,				FIELD_NOT_EXIST,		"LBU"	},
+	{ IType, 1<<3 | 1<<2 | 1<<1 | 1,	FIELD_NOT_EXIST,		"LUI"	},
+	{ IType, 1<<5 | 1<<1 | 1,			FIELD_NOT_EXIST,		"LW"	},
+	{ IType, 1<<5 | 1<<1,				FIELD_NOT_EXIST,		"LWL"	},
+	{ IType, 1<<5 | 1<<2 | 1<<1,		FIELD_NOT_EXIST,		"LWR"	},
+	{ RType, 0,							1<<4,					"MFHI"	},
+	{ RType, 0,							1<<4 | 1<<1,			"MFLO"	},
+	{ RType, 0,							1<<4 | 1<<3,			"MULT"	},
+	{ RType, 0,							1<<4 | 1<<3 | 1,		"MULTU"	},
+	{ RType, 0,							1<<5 | 1<<2 | 1,		"OR"	},
+	{ IType, 1<<3 | 1<<2 | 1,			FIELD_NOT_EXIST,		"ORI"	},
+	{ IType, 1<<5 | 1<<3,				FIELD_NOT_EXIST,		"SB"	},
+	{ IType, 1<<5 | 1<<3 | 1,			FIELD_NOT_EXIST,		"SH"	},
+	{ RType, 0,							0,						"SLL"	},
+	{ RType, 0,							1<<2,					"SLLV"	},
+	{ RType, 0,							1<<5 | 1<<3 | 1<<1,		"SLT"	},
+	{ IType, 1<<3 | 1<<1,				FIELD_NOT_EXIST,		"SLTI"	},
+	{ IType, 1<<3 | 1<<1 | 1,			FIELD_NOT_EXIST,		"SLTIU"	},
+	{ RType, 0,							1<<5 | 1<<3 | 1<<1 | 1,	"SLTU"	},
+	{ RType, 0,							1<<1 | 1,				"SRA"	},
+	{ RType, 0,							1<<1,					"SRL"	},
+	{ RType, 0,							1<<2 | 1<<1,			"SRLV"	},
+	{ RType, 0,							1<<5 | 1<<1,			"SUB"	},
+	{ RType, 0,							1<<5 | 1<<1 | 1,		"SUBU"	},
+	{ IType, 1<<5 | 1<<3 | 1<<1 | 1,	FIELD_NOT_EXIST,		"SW"	},
+	{ RType, 0,							1<<5 | 1<<2 | 1<<1,		"XOR"	},
+	{ IType, 1<<3 | 1<<2 | 1<<1,		FIELD_NOT_EXIST,		"XORI"	},
 };
 
 struct Instruction{
