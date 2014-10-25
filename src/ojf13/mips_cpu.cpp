@@ -12,17 +12,16 @@
 /*
  * MIPS register
  */
-mips_register::mips_register(void) : _value(0), _allowSet(true){};
-mips_register::mips_register(bool isZero) : _value(0), _allowSet(isZero){};
+mips_register::mips_register(void) : _value(0), _isZero(false){};
+mips_register::mips_register(bool isZero) : _value(0), _isZero(isZero){};
 
 uint32_t mips_register::value(void) const{
 	return _value;
 }
 void mips_register::value(uint32_t iVal){
-	if(_allowSet)
+	if(!_isZero)
 		_value = iVal;
-	else
-		throw mips_InternalError;
+	else;
 };
 //
 
@@ -35,7 +34,7 @@ mips_register&  mips_regset_gp::operator[](unsigned idx){
 	if(idx >= MIPS_NUM_REG)
 		throw mips_ErrorInvalidArgument;
 	else
-		return idx==0 ? _r0 : _r[idx];
+		return idx==0 ? _r0 : _r[idx-1];
 }
 //
 
@@ -127,11 +126,12 @@ mips_cpu::mips_cpu(mips_mem* mem) : r(), _alu(&_alu_in_a, &_alu_in_b),
 void mips_cpu::reset(void){
 	
 	//Zero registers
-	for(int i=0; i<MIPS_NUM_REG; ++i){
+	for(int i=0; i<MIPS_NUM_REG; ++i)
 		r[i].value(0);
-	}
 	
 	_pc.internal_set(0);
+	_npc.internal_set(0);
+	_ir.internal_set(0);
 	_hi.internal_set(0);
 	_lo.internal_set(0);
 }
@@ -233,8 +233,17 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 	//ALU inputs
 	switch(type){
 		case RType:
-			*aluInA = r[ _irDecoded->regS() ].value();
-			*aluInB = r[ _irDecoded->regT() ].value() << _irDecoded->shift();
+			switch(_irDecoded->mnemonic()){
+				case SLL:
+				case SRL:
+				case SRA:
+					*aluInA = _irDecoded->shift();
+					break;
+				default:
+					*aluInA = r[ _irDecoded->regS() ].value();
+			}
+			
+			*aluInB = r[ _irDecoded->regT() ].value();
 			break;
 		
 		case IType:

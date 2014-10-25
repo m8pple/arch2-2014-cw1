@@ -38,7 +38,7 @@ protected:
 	uint32_t _value;
 	
 private:
-	bool _allowSet;
+	bool _isZero;
 };
 
 struct mips_regset_gp{

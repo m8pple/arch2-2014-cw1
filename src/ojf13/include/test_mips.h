@@ -24,7 +24,7 @@ struct testResult{
     int passed;
 };
 
-void runTest(testResult(*test)(mips_cpu_h, mips_mem_h), mips_cpu_h, mips_mem_h);
+void runTest(testResult(*test)(mips_cpu_h, mips_mem_h), mips_cpu_h, mips_mem_h, unsigned=1024);
 
 typedef int (*verifyFuncI)(uint32_t, uint16_t);
 typedef int (*verifyFuncR)(uint32_t, uint32_t, uint32_t);
