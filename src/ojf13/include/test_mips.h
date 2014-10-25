@@ -26,7 +26,7 @@ struct testResult{
 
 void runTest(testResult(*test)(mips_cpu_h, mips_mem_h), mips_cpu_h, mips_mem_h);
 
-typedef int (*verifyFuncI)(uint32_t, uint32_t);
+typedef int (*verifyFuncI)(uint32_t, uint16_t);
 typedef int (*verifyFuncR)(uint32_t, uint32_t, uint32_t);
 testResult RTypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncR);
 testResult ITypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncI);

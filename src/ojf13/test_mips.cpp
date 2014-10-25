@@ -11,6 +11,7 @@
 
 #include <random>
 #include <string>
+#include <iostream>
 
 int main(){
     mips_mem_h mem = mips_mem_create_ram(1<<5, 4);
@@ -105,6 +106,11 @@ testResult RTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 			uint32_t r3;
 			mips_cpu_get_register(cpu, 3, &r3);
 			correct = r3 == verfunc(r1, r2, shift);
+			
+			if(!correct){
+				std::cout << "Result was: 0x" << r3 << std::endl;
+				std::cout << "--Expected: 0x" << verfunc(r1, r2, shift) << std::endl;
+			}
 		}
 	} catch(mips_error) {
 		correct = 0;
@@ -121,7 +127,7 @@ testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 	try{
 		for(int r=0; r<1024 && correct; ++r){
 			uint32_t r1 = rand();
-			uint32_t imm= rand();
+			uint16_t imm= rand();
 			
 			mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, imm).bufferedVal());
 			
@@ -133,6 +139,11 @@ testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 			uint32_t r2;
 			mips_cpu_get_register(cpu, 2, &r2);
 			correct = r2 == verfunc(r1, imm);
+			
+			if(!correct){
+				std::cout << "Result was: 0x" << r2 << std::endl;
+				std::cout << "--Expected: 0x" << verfunc(r1, imm) << std::endl;
+			}
 		}
 	} catch(mips_error) {
 		correct = 0;
@@ -144,14 +155,14 @@ testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 }
 
 uint32_t ADDverify(uint32_t r1, uint32_t r2, uint32_t shift){
-	return r1+(r2<<shift);
+	return (signed)r1+(((signed)r2)<<shift);
 }
 testResult ADDResult(mips_cpu_h cpu, mips_mem_h mem){
 	return RTypeResult(cpu, mem, ADD, (verifyFuncR)ADDverify);
 }
 
-uint32_t ADDIverify(uint32_t r1, uint32_t i){
-	return r1+i;
+uint32_t ADDIverify(uint32_t r1, uint16_t i){
+	return r1+(i&0x8000 ? 0xFFFF0000|i : i);
 }
 testResult ADDIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, ADDI, (verifyFuncI)ADDIverify);
@@ -185,6 +196,11 @@ testResult ANDInputs(mips_cpu_h cpu, mips_mem_h mem){
 			mips_cpu_get_register(cpu, 1, &or1);
 			mips_cpu_get_register(cpu, 2, &or2);
 			correct = (or1==ir1) && (or2==ir2);
+			
+			if(!correct){
+				std::cout << "Registers changed from: 0x" << ir1 << ", 0x" << ir2 << std::endl;
+				std::cout << "--------------------To: 0x" << or1 << ", 0x" << or2 << std::endl;
+			}
 		}
 	} catch(mips_error){
 		correct = 0;
