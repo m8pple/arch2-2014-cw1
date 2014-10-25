@@ -283,7 +283,7 @@ void mips_cpu::decode(){
 		  ||(	mipsInstruction[i].type == IType
 			 &&	mipsInstruction[i].func == ir->regT())
 		)){
-			std::cout << "Matched: instr #" << i << " (see enum)" << std::endl;
+			std::cout << "Matched: " << mipsInstruction[i].mnem << std::endl;
 			ir->setDecoded((mips_asm)i, mipsInstruction[i].type);
 			_irDecoded = ir;
 			
