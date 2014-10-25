@@ -49,7 +49,7 @@ struct mips_regset_gp{
 public:
 	mips_regset_gp(void);
 	
-	mips_register& operator[](int);
+	mips_register& operator[](unsigned);
 	
 private:
 	mips_register _r0;
@@ -59,10 +59,7 @@ private:
 struct mips_reg_sp: mips_register{
 public:
 	mips_reg_sp(void);
-	
-	using mips_register::value;
-	//make sure we know "we are the CPU" when setting
-	void value(uint32_t) const;
+
 	void internal_set(uint32_t);
 	
 private:
@@ -83,8 +80,9 @@ typedef uint32_t (*ALU_OP)(uint32_t, uint32_t);
 
 struct mips_alu{
 public:
-	void execute(uint32_t*) const;
+	mips_alu(uint32_t*, uint32_t*);
 	
+	void execute(uint32_t*) const;
 	void setOperation(mips_asm);
 	
 	uint32_t* in_a;
@@ -185,11 +183,14 @@ protected:
 	mips_reg_sp		_ir;
 	mips_reg_sp		_hi;
 	mips_reg_sp		_lo;
+	mips_reg_sp		_lmd;
 
 	mips_cpu_stage	_stage;
 	
 	mips_mem*		_mem_ptr;
 	
 private:
+	uint32_t		_alu_in_a;
+	uint32_t		_alu_in_b;
 	Instruction*	_irDecoded;
 };

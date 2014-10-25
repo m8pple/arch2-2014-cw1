@@ -7,6 +7,7 @@
 //
 
 #include "include/mips_cpu.h"
+#include <iostream>
 
 /*
  * MIPS register
@@ -20,6 +21,8 @@ uint32_t mips_register::value(void) const{
 void mips_register::value(uint32_t iVal){
 	if(_allowSet)
 		_value = iVal;
+	else
+		throw mips_InternalError;
 };
 //
 
@@ -28,11 +31,11 @@ void mips_register::value(uint32_t iVal){
  */
 mips_regset_gp::mips_regset_gp(void) : _r0(false){};
 	
-mips_register&  mips_regset_gp::operator[](int idx){
+mips_register&  mips_regset_gp::operator[](unsigned idx){
 	if(idx >= MIPS_NUM_REG)
 		throw mips_ErrorInvalidArgument;
 	else
-		return idx==0 ? _r0 : _r[idx-1];
+		return idx==0 ? _r0 : _r[idx];
 }
 //
 
@@ -41,10 +44,6 @@ mips_register&  mips_regset_gp::operator[](int idx){
  */
 mips_reg_sp::mips_reg_sp(void) : mips_register(false){};
 
-//make sure we know "we are the CPU" when setting
-void mips_reg_sp::value(uint32_t) const{
-	throw mips_ExceptionAccessViolation;
-}
 void mips_reg_sp::internal_set(uint32_t iVal){
 	_value = iVal;
 }
@@ -55,7 +54,7 @@ void mips_reg_sp::internal_set(uint32_t iVal){
  */
 mips_reg_pc::mips_reg_pc(mips_reg_sp* npc) : _npc(npc), mips_reg_sp(){};
 
-void mips_reg_pc::advance(int32_t offset=4){
+void mips_reg_pc::advance(int32_t offset=0){
 	internal_set(_npc->value()+offset);
 }
 //
@@ -63,12 +62,16 @@ void mips_reg_pc::advance(int32_t offset=4){
 /*
  * MIPS ALU
  */
+mips_alu::mips_alu(uint32_t* a, uint32_t* b) : in_a(a), in_b(b){};
+
 void mips_alu::setOperation(mips_asm mnem){
 	_operation = aluOp[mnem];
 }
 
 void mips_alu::execute(uint32_t* out) const{
+	std::cout << "Executing..." << std::endl;
 	*out = _operation(*in_a, *in_b);
+	std::cout << "Result of ALU operation was 0x" << *out << std::endl;
 }
 
 uint32_t mips_alu::alu_add(uint32_t a, uint32_t b){
@@ -118,7 +121,8 @@ uint32_t mips_alu::alu_xor(uint32_t a, uint32_t b){
 /*
  * MIPS CPU
  */
-mips_cpu::mips_cpu(mips_mem* mem) : r(), _pc(&_npc), _npc(), _hi(), _lo(), _stage(IF), _mem_ptr(mem){};
+mips_cpu::mips_cpu(mips_mem* mem) : r(), _alu(&_alu_in_a, &_alu_in_b),
+									_pc(&_npc), _npc(), _hi(), _lo(), _stage(IF), _mem_ptr(mem){};
 
 void mips_cpu::reset(void){
 	
@@ -133,42 +137,86 @@ void mips_cpu::reset(void){
 }
 
 void mips_cpu::step(void){
-	uint32_t pcOffset = 4;
-	uint32_t aluOut;
-	uint32_t aluInA, aluInB;
+	uint32_t	aluOut;
+	uint8_t		buf[4];
 	
 	fetchInstr();
-	_npc.value(pc()+4);
+	_npc.internal_set(pc()+4);
 	
 	_stage = ID;
 	
 	decode();
-	fetchRegs(&aluInA, &aluInB);
+	fetchRegs(_alu.in_a, _alu.in_b);
 	
 	_stage = EX;
-	
-	// magic
+	//magic
+	_alu.execute(&aluOut);
 	
 	_stage = MEM;
-	
 	// bit less magic
 	bool cond;
-	bool isBranch;
-	if(isBranch){
-		if(cond)
-			pcOffset = aluOut;
-		else
-			pcOffset = 4;
+	switch(_irDecoded->mnemonic()){
+		//branch
+		case BEQ:
+		case BGEZ:
+		case BGEZAL:
+		case BGTZ:
+		case BLEZ:
+		case BLTZ:
+		case BLTZAL:
+		case BNE:
+			if(cond)
+				_pc.advance(aluOut);
+			else
+				_pc.advance();
+			//no WB stage for branch
+			_stage = IF;
+			return;
 		
-		//no WB stage for branch
-		_stage = IF;
-		return;
+		//load
+		case LB:
+		case LBU:
+		case LW:
+		case LWL:
+		case LWR:
+			_mem_ptr->read(buf, aluOut, 4);
+			_lmd.value(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
+		
+		//store
+		case SB:
+		case SH:
+		case SW:
+			for(int i=0; i<4; ++i)
+				buf[i] = (uint8_t)( ((_irDecoded->regT())>>(3-i)*8)&MASK_08b );
+			_mem_ptr->write(aluOut, 4, buf);
+		
+		default:
+			break;
 	}
 	
 	_stage = WB;
-	
 	// more magic
-	_pc.advance(pcOffset);
+	switch(_irDecoded->type()){
+		case RType:
+			r[ _irDecoded->regD() ].value(aluOut);
+			break;
+		case IType:
+			switch(_irDecoded->mnemonic()){
+				case LB:
+				case LBU:
+				case LW:
+				case LWL:
+				case LWR:
+					r[ _irDecoded->regT() ].value(_lmd.value());
+				default:
+					r[ _irDecoded->regT() ].value(aluOut);
+			}
+			break;
+		case JType:
+			throw mips_InternalError;
+	}
+	
+	_pc.advance();
 }
 
 //make sure we know "we are the CPU" when setting
@@ -181,12 +229,17 @@ uint32_t mips_cpu::pc(void) const{
 }
 
 void mips_cpu::fetchInstr(){
+	std::cout << "Fetching instruction..." << std::endl;
 	uint8_t	buf[4];
 	_mem_ptr->read(buf, pc(), 4);
-	_ir.value((uint32_t)*buf);
+	_ir.internal_set(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
+	std::cout << "Fetched 0x" << std::hex << (int)buf[0] << (int)buf[1] << (int)buf[2] << (int)buf[3] << std::endl;
+	_npc.internal_set(pc()+4);
+	std::cout << "Set NPC to " << std::hex << _npc.value() << std::endl;
 }
 
 void mips_cpu::decode(){
+	std::cout << "Decoding..." << std::endl;
 	Instruction *ir = new Instruction(_ir.value());
 	
 	for(int i=0; i<NUM_INSTR; ++i){
@@ -198,6 +251,7 @@ void mips_cpu::decode(){
 		  ||(	mipsInstruction[i].type == IType
 			 &&	mipsInstruction[i].func == ir->regT())
 		)){
+			std::cout << "Matched: instr #" << i << " (see enum)" << std::endl;
 			ir->setDecoded((mips_asm)i, mipsInstruction[i].type);
 			_irDecoded = ir;
 			
@@ -211,23 +265,19 @@ void mips_cpu::decode(){
 }
 
 void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
+	std::cout << "Fetching registers..." << std::endl;
 	mips_instr_type type = _irDecoded->type();
 	bool isSigned;
-	
-	//Immediate
-	if( type == IType ){
-		
-	}
-	
+
 	//ALU inputs
 	switch(type){
 		case RType:
-			*aluInA = _irDecoded->regS();
-			*aluInB = _irDecoded->regT();	//this should be shifted?
+			*aluInA = r[ _irDecoded->regS() ].value();
+			*aluInB = r[ _irDecoded->regT() ].value();	//this should be shifted?
 			break;
 		
 		case IType:
-			*aluInA = _irDecoded->regS();
+			*aluInA = r[ _irDecoded->regS() ].value();
 			isSigned = (_irDecoded->immediate()&(MASK_IMDT>>1))
 							!=	(_irDecoded->immediate()&(MASK_IMDT));
 			*aluInB = isSigned
@@ -244,5 +294,7 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 			throw mips_InternalError;
 	}
 	
+	std::cout << "Set ALU input A to: 0x" << std::hex << *aluInA << std::endl;
+	std::cout << "Set ALU input B to: 0x" << std::hex << *aluInB << std::endl;
 }
 //
