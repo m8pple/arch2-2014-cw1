@@ -74,7 +74,11 @@ void mips_alu::execute(uint32_t* out) const{
 }
 
 uint32_t mips_alu::alu_add(uint32_t a, uint32_t b){
-	return (signed)a+(signed)b;
+	int64_t p = (signed)a+(signed)b;
+	if((int32_t)p == p)
+		return (uint32_t)p;
+	else
+		throw mips_ExceptionArithmeticOverflow;
 }
 uint32_t mips_alu::alu_addu(uint32_t a, uint32_t b){
 	return a+b;
@@ -202,7 +206,7 @@ void mips_cpu::fetchInstr(){
 void mips_cpu::decode(){
 	std::cout << "Decoding..." << std::endl;
 	Instruction *ir = new Instruction(_ir.value());
-	
+
 	for(int i=0; i<NUM_INSTR; ++i){
 		if(	mipsInstruction[i].opco == ir->opcode() && (
 			(	mipsInstruction[i].type == RType
@@ -212,6 +216,7 @@ void mips_cpu::decode(){
 		  ||(	mipsInstruction[i].type == IType
 			 &&	mipsInstruction[i].func == ir->regT())
 		)){
+
 			std::cout << "Matched: " << mipsInstruction[i].mnem << std::endl;
 			ir->setDecoded((mips_asm)i, mipsInstruction[i].type);
 			_irDecoded = ir;
@@ -221,7 +226,7 @@ void mips_cpu::decode(){
 		}
 	}
 	//no match
-	
+
 	throw mips_ExceptionInvalidInstruction;
 }
 
