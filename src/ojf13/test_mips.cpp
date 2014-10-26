@@ -521,5 +521,30 @@ testResult MULTUResult(mips_cpu_h cpu, mips_mem_h mem){
 	return hiloResult(cpu, mem, MULTU, MULTUverify);
 }
 
+uint32_t ORverify(uint32_t r1, uint32_t r2, uint8_t){
+	return r1|r2;
+}
+testResult ORResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, OR, (verifyFuncR)ORverify);
+}
 
+uint32_t ORIverify(uint32_t r1, uint16_t i){
+	return r1|(0x00000000|i);
+}
+testResult ORIResult(mips_cpu_h cpu, mips_mem_h mem){
+	return ITypeResult(cpu, mem, ORI, (verifyFuncI)ORIverify);
+}
 
+uint32_t XORverify(uint32_t r1, uint32_t r2, uint8_t){
+	return r1^r2;
+}
+testResult XORResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, XOR, (verifyFuncR)XORverify);
+}
+
+uint32_t XORIverify(uint32_t r1, uint16_t i){
+	return r1^(0x00000000|i);
+}
+testResult XORIResult(mips_cpu_h cpu, mips_mem_h mem){
+	return ITypeResult(cpu, mem, XORI, (verifyFuncI)XORIverify);
+}
