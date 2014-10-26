@@ -61,70 +61,170 @@ void mips_reg_pc::advance(void){
 /*
  * MIPS ALU
  */
-mips_alu::mips_alu(uint32_t* a, uint32_t* b) : in_a(a), in_b(b){};
+mips_alu::mips_alu(uint32_t* out, const uint32_t* a, const uint32_t* b,
+				   hilo* hilo) : outp(out), in_a(a), in_b(b), _hilo(hilo){};
 
 void mips_alu::setOperation(mips_asm mnem){
-	_operation = aluOp[mnem];
+	switch(mnem){
+		case ADD:
+		case ADDI:
+		case JR:
+		case LB:
+		case LBU:
+		case LW:
+		case LWL:
+		case LWR:
+		case SB:
+		case SH:
+		case SW:
+			_operation = alu_add;
+			break;
+		case ADDIU:
+		case ADDU:
+			_operation = alu_addu;
+			break;
+		case AND:
+		case ANDI:
+			_operation = alu_and;
+			break;
+		case BEQ:
+		case BGEZ:
+		case BGEZAL:
+		case BGTZ:
+		case BLEZ:
+		case BLTZ:
+		case BLTZAL:
+		case BNE:
+		case SLT:
+		case SLTI:
+		case SUB:
+			_operation = alu_subtract;
+			break;
+		case DIV:
+			_operation = alu_divide;
+			break;
+		case DIVU:
+			_operation = alu_divideu;
+			break;
+		case J:
+		case JAL:
+		case LUI:
+		case MFHI:
+		case MFLO:
+		case OR:
+		case ORI:
+			_operation = alu_or;
+			break;
+		case MULT:
+			_operation = alu_multiply;
+			break;
+		case MULTU:
+			_operation = alu_multiplyu;
+			break;
+		case SLL:
+		case SLLV:
+			_operation = alu_shiftleft;
+			break;
+		case SLTIU:
+		case SLTU:
+		case SUBU:
+			_operation = alu_subtractu;
+			break;
+		case SRA:
+			_operation = alu_shiftright;
+			break;
+		case SRL:
+		case SRLV:
+			_operation = alu_shiftrightu;
+			break;
+		case XOR:
+		case XORI:
+			_operation = alu_xor;
+	}
 }
 
-void mips_alu::execute(uint32_t* out) const{
+void mips_alu::execute(void) const{
 	std::cout << "Executing..." << std::endl;
-	*out = _operation(*in_a, *in_b);
-	std::cout << "Result of ALU operation was 0x" << *out << std::endl;
+	*_hilo = _operation(outp, in_a, in_b);
+	std::cout << "Result of ALU operation was 0x" << *outp << std::endl;
 }
 
-uint32_t mips_alu::alu_add(uint32_t a, uint32_t b){
-	int64_t p = (signed)a+(signed)b;
+hilo mips_alu::alu_add(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	int64_t p = (signed)*a+(signed)*b;
 	if((int32_t)p == p)
-		return (uint32_t)p;
+		*out = (uint32_t)p;
 	else
 		throw mips_ExceptionArithmeticOverflow;
+	return {};
 }
-uint32_t mips_alu::alu_addu(uint32_t a, uint32_t b){
-	return a+b;
+hilo mips_alu::alu_addu(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	*out = *a + *b;
+	return {};
 }
-uint32_t mips_alu::alu_and(uint32_t a, uint32_t b){
-	return a&b;
+hilo mips_alu::alu_and(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	*out = (*a)&(*b);
+	return {};
 }
-uint32_t mips_alu::alu_divide(uint32_t a, uint32_t b){
-	throw mips_ErrorNotImplemented;
+hilo mips_alu::alu_divide(uint32_t* out, const uint32_t* a, const uint32_t* b){\
+	//Undefined if b==0
+	return {
+		(uint32_t)((signed)*a/(*b?(signed)*b:1)),
+		(uint32_t)((signed)*a%(*b?(signed)*b:1))
+	};
 }
-uint32_t mips_alu::alu_divideu(uint32_t a, uint32_t b){
-	throw mips_ErrorNotImplemented;
+hilo mips_alu::alu_divideu(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	//Undefined if b==0
+	return {
+		(uint32_t)(*a/(*b?*b:1)),
+		(uint32_t)(*a%(*b?*b:1))
+	};
 }
-uint32_t mips_alu::alu_or(uint32_t a, uint32_t b){
-	return a|b;
+hilo mips_alu::alu_or(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	*out = (*a)|(*b);
+	return {};
 }
-uint32_t mips_alu::alu_multiply(uint32_t a, uint32_t b){
-	throw mips_ErrorNotImplemented;
+hilo mips_alu::alu_multiply(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	return {
+		(uint32_t)(( ((signed)*a*(signed)*b)&0xFFFFFFFF00000000 ) >> 32 ),
+		(uint32_t)(( ((signed)*a*(signed)*b)&0x00000000FFFFFFFF ) )
+	};
 }
-uint32_t mips_alu::alu_multiplyu(uint32_t a, uint32_t b){
-	throw mips_ErrorNotImplemented;
+hilo mips_alu::alu_multiplyu(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	uint64_t p = (*a)*(*b);
+	return {
+		(uint32_t)( (p&0xFFFFFFFF00000000) >> 32 ),
+		(uint32_t)( (p&0x00000000FFFFFFFF) )
+	};
 }
-uint32_t mips_alu::alu_shiftleft(uint32_t a, uint32_t b){
-	return a<<b;
+hilo mips_alu::alu_shiftleft(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	return {};
 }
-uint32_t mips_alu::alu_sub(uint32_t a, uint32_t b){
-	return (signed)a-(signed)b;
+hilo mips_alu::alu_subtract(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	*out = (signed)(*a) - (signed)(*b);
+	return {};
 }
-uint32_t mips_alu::alu_subu(uint32_t a, uint32_t b){
-	return a-b;
+hilo mips_alu::alu_subtractu(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	*out = (*a)-(*b);
+	return {};
 }
-uint32_t mips_alu::alu_shiftright(uint32_t a, uint32_t b){
-	return ((signed)a)>>b;
+hilo mips_alu::alu_shiftright(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	*out = ((signed)*a) >> (*b);
+	return {};
 }
-uint32_t mips_alu::alu_shiftrightu(uint32_t a, uint32_t b){
-	return a>>b;
+hilo mips_alu::alu_shiftrightu(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	*out = (*a) >> (*b);
+	return {};
 }
-uint32_t mips_alu::alu_xor(uint32_t a, uint32_t b){
-	return a^b;
+hilo mips_alu::alu_xor(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	*out = (*a)^(*b);
+	return {};
 }
 //
 
 /*
  * MIPS CPU
  */
-mips_cpu::mips_cpu(mips_mem* mem) : r(), _alu(&_alu_in_a, &_alu_in_b),
+mips_cpu::mips_cpu(mips_mem* mem) : r(), _alu(&_alu_out, &_alu_in_a, &_alu_in_b, &_alu_hilo),
 									_pc(&_npc), _npc(), _hi(), _lo(), _stage(IF), _mem_ptr(mem){};
 
 void mips_cpu::reset(void){
@@ -141,7 +241,7 @@ void mips_cpu::reset(void){
 }
 
 void mips_cpu::step(void){
-	uint32_t	aluOut;
+	//uint32_t	aluOut;
 	
 	_stage = IF;
 	
@@ -150,20 +250,20 @@ void mips_cpu::step(void){
 	_stage = ID;
 	
 	decode();
-	fetchRegs(_alu.in_a, _alu.in_b);
+	fetchRegs(&_alu_in_a, &_alu_in_b);
 	
 	_stage = EX;
 	//magic
-	_alu.execute(&aluOut);
+	_alu.execute();
 	
 	_stage = MEM;
 	// bit less magic
-	bool wb = accessMem(&aluOut);
+	bool wb = accessMem(&_alu_out);
 
 	if(wb){
 		_stage = WB;
 		// more magic
-		writeBack(&aluOut);
+		writeBack(&_alu_out);
 	}
 }
 
@@ -221,17 +321,27 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 	//ALU inputs
 	switch(type){
 		case RType:
+			*aluInB = r[ _irDecoded->regT() ].value();
 			switch(_irDecoded->mnemonic()){
 				case SLL:
 				case SRL:
 				case SRA:
 					*aluInA = _irDecoded->shift();
 					break;
+				
+					//MFHI/LO OR respective with 0
+				case MFHI:
+					*aluInA = _hi.value();
+					*aluInB = 0;
+					break;
+				case MFLO:
+					*aluInA = _lo.value();
+					*aluInB = 0;
+					break;
+				
 				default:
 					*aluInA = r[ _irDecoded->regS() ].value();
 			}
-			
-			*aluInB = r[ _irDecoded->regT() ].value();
 			break;
 		
 		case IType:
@@ -424,8 +534,19 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 	
 	switch(_irDecoded->type()){
 		case RType:
+			switch(_irDecoded->mnemonic()){
+				case DIV:
+				case DIVU:
+				case MULT:
+				case MULTU:
+					_hi.internal_set(_alu_hilo.hi);
+					_lo.internal_set(_alu_hilo.lo);
+				default:
+					break;
+			}
 			r[ _irDecoded->regD() ].value(*aluOut);
 			break;
+
 		case IType:
 			switch(_irDecoded->mnemonic()){
 				case LB:
@@ -437,6 +558,7 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 				default:
 					r[ _irDecoded->regT() ].value(*aluOut);
 			}
+
 			break;
 		case JType:
 			throw mips_InternalError;

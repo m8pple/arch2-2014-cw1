@@ -71,87 +71,41 @@ private:
 	mips_reg_sp* _npc;
 };
 
-
-typedef uint32_t (*ALU_OP)(uint32_t, uint32_t);
+struct hilo{
+	uint32_t hi;
+	uint32_t lo;
+};
 
 struct mips_alu{
 public:
-	mips_alu(uint32_t*, uint32_t*);
+	mips_alu(uint32_t*, const uint32_t*, const uint32_t*, hilo*);
 	
-	void execute(uint32_t*) const;
+	void execute(void) const;
 	void setOperation(mips_asm);
 	
-	uint32_t* in_a;
-	uint32_t* in_b;
-	
-	//Index in with mips_asm enum type
-	const ALU_OP aluOp[NUM_INSTR] = {
-		alu_add,		//ADD
-		alu_add,		//ADDI is just different input
-		alu_addu,		//ADDIU
-		alu_addu,		//ADDU " "
-		alu_and,		//AND
-		alu_and,		//ANDI " "
-		alu_sub,		//BEQ
-		alu_sub,		//BGEZ
-		alu_sub,		//BGEZAL
-		alu_sub,		//BGTZ
-		alu_sub,		//BLEZ
-		alu_sub,		//BLTZ
-		alu_sub,		//BLTZAL
-		alu_sub,		//BNE
-		alu_divide,		//DIV
-		alu_divideu,	//DIVU
-		alu_or,			//J does PC<- PC[31..28] || trgt<<2
-		alu_or,			//JAL " "
-		alu_add,		//JR has treg:=0 so we do npc<-sreg+0
-		alu_add,		//LB does treg <- mem[ sreg+imm ]
-		alu_add,		//LBU " " (output not sign extended)
-		alu_or,			//LUI does treg<- imm<<16 || 0x0
-		alu_add,		//LW
-		alu_add,		//LWL
-		alu_add,		//LWR
-		nullptr,		//MFHI
-		nullptr,		//MFLO
-		alu_multiply,	//MULT
-		alu_multiplyu,	//MULTU
-		alu_or,			//OR
-		alu_or,			//ORI
-		alu_add,		//SB as LB
-		alu_add,		//SH
-		alu_shiftleft,	//SLL
-		alu_shiftleft,	//SLLV
-		alu_sub,		//SLT
-		alu_sub,		//SLTI
-		alu_subu,		//SLTIU
-		alu_subu,		//SLTU
-		alu_shiftright,	//SRA
-		alu_shiftrightu,//SRL
-		alu_shiftrightu,//SRLV
-		alu_sub,		//SUB
-		alu_subu,		//SUBU
-		alu_add,		//SW
-		alu_xor,		//XOR
-		alu_xor,		//XORI
-	};
+	uint32_t*	outp;
+	const uint32_t* in_a;
+	const uint32_t* in_b;
 	
 private:
-	ALU_OP _operation;
+	hilo* _hilo;
 	
-	static uint32_t alu_add(uint32_t, uint32_t);
-	static uint32_t alu_addu(uint32_t, uint32_t);
-	static uint32_t alu_and(uint32_t, uint32_t);
-	static uint32_t alu_divide(uint32_t, uint32_t);
-	static uint32_t alu_divideu(uint32_t, uint32_t);
-	static uint32_t alu_or(uint32_t, uint32_t);
-	static uint32_t alu_multiply(uint32_t, uint32_t);
-	static uint32_t alu_multiplyu(uint32_t, uint32_t);
-	static uint32_t alu_shiftleft(uint32_t, uint32_t);
-	static uint32_t alu_sub(uint32_t, uint32_t);
-	static uint32_t alu_subu(uint32_t, uint32_t);
-	static uint32_t alu_shiftright(uint32_t, uint32_t);
-	static uint32_t alu_shiftrightu(uint32_t, uint32_t);
-	static uint32_t alu_xor(uint32_t, uint32_t);
+	hilo (*_operation)(uint32_t*, const uint32_t*, const uint32_t*);
+	
+	static hilo alu_add(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_addu(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_and(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_divide(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_divideu(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_or(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_multiply(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_multiplyu(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_shiftleft(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_subtract(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_subtractu(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_shiftright(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_shiftrightu(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_xor(uint32_t*, const uint32_t*, const uint32_t*);
 };
 
 struct mips_cpu{
@@ -193,5 +147,7 @@ protected:
 private:
 	uint32_t		_alu_in_a;
 	uint32_t		_alu_in_b;
+	uint32_t		_alu_out;
+	hilo			_alu_hilo;
 	Instruction*	_irDecoded;
 };
