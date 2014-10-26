@@ -97,12 +97,14 @@ testResult memoryIO(mips_cpu_h cpu, mips_mem_h mem){
 }
 
 testResult RTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncR verfunc){
-	int correct = 1;
+	int correct = -1;
+	uint32_t r1, r2, r3, exp;
+	uint8_t shift;
 	
 	try{
-		uint8_t shift = rand()&(MASK_SHFT>>POS_SHFT);
-		uint32_t r1 = rand();
-		uint32_t r2 = rand();
+		uint8_t	shift = rand()&(MASK_SHFT>>POS_SHFT);
+		r1 = rand();
+		r2 = rand();
 		
 		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, 3, shift).bufferedVal());
 		
@@ -112,18 +114,46 @@ testResult RTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 		mips_cpu_set_pc(cpu, 0);
 		mips_cpu_step(cpu);
 		
-		uint32_t r3;
 		mips_cpu_get_register(cpu, 3, &r3);
-		correct = r3 == verfunc(r1, r2, shift);
 		
-		if(!correct){
-			std::cout << "Result was: 0x" << r3 << std::endl;
-			std::cout << "--Expected: 0x" << verfunc(r1, r2, shift) << std::endl;
+	} catch(mips_error e) {
+		try{
+			exp = verfunc(r1, r2, shift);
+			correct = 0;		//Simulator threw exception, shouldn't have.
+			std::cout << "Incorrect result." << std::endl;
+			std::cout << "Result was: Exception " << e << std::endl;
+			std::cout << "--Expected: 0x" << exp << std::endl;
+		} catch(mips_error v){
+			if( v == e )
+				correct = 1;	//Correct exception
+			else{
+				correct = 0;	//Exception, but the wrong one!
+				std::cout << "Incorrect result." << std::endl;
+				std::cout << "Result was: Exception " << e << std::endl;
+				std::cout << "--Expected: Exception " << v << std::endl;
+			}
 		}
-		
-	} catch(mips_error) {
-		correct = 0;
 	}
+	if(correct == -1){
+		try{
+			exp = verfunc(r1, r2, shift);
+			if( r3 == exp )
+				correct = 1;	//No exception, correct result
+			else{
+				correct = 0;	//Incorrect result.
+				std::cout << "Incorrect result." << std::endl;
+				std::cout << "Result was: 0x" << r3 << std::endl;
+				std::cout << "--Expected: 0x" << exp << std::endl;
+			}
+		} catch(mips_error v){
+			correct = 0;		//No exception, should have
+			std::cout << "Incorrect result." << std::endl;
+			std::cout << "Result was: 0x" << r3 << std::endl;
+			std::cout << "--Expected: Exception " << v << std::endl;
+		}
+	}
+	else;
+	
 	std::string desc ="Check result of ";
 	desc += mipsInstruction[mnemonic].mnem;
 	desc += "-ing.";
@@ -132,10 +162,12 @@ testResult RTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 
 testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncI verfunc){
 	int correct = 1;
+	uint32_t r1, r2, exp;
+	uint16_t imm;
 	
 	try{
-		uint32_t r1 = rand();
-		uint16_t imm= rand();
+		r1 = rand();
+		imm= rand();
 		
 		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, imm).bufferedVal());
 		
@@ -144,39 +176,92 @@ testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 		mips_cpu_set_pc(cpu, 0);
 		mips_cpu_step(cpu);
 		
-		uint32_t r2;
 		mips_cpu_get_register(cpu, 2, &r2);
 		correct = r2 == verfunc(r1, imm);
 		
-		if(!correct){
-			std::cout << "Result was: 0x" << r2 << std::endl;
-			std::cout << "--Expected: 0x" << verfunc(r1, imm) << std::endl;
-		}
+		
 	
-	} catch(mips_error) {
-		correct = 0;
+	} catch(mips_error e) {
+		try{
+			exp = verfunc(r1, imm);
+			correct = 0;		//Simulator threw exception, shouldn't have.
+			std::cout << "Incorrect result." << std::endl;
+			std::cout << "Result was: Exception " << e << std::endl;
+			std::cout << "--Expected: 0x" << exp << std::endl;
+		} catch(mips_error v){
+			if( v == e )
+				correct = 1;	//Correct exception
+			else{
+				correct = 0;	//Exception, but the wrong one!
+				std::cout << "Incorrect result." << std::endl;
+				std::cout << "Result was: Exception " << e << std::endl;
+				std::cout << "--Expected: Exception " << v << std::endl;
+			}
+		}
 	}
+	if(correct == -1){
+		try{
+			exp = verfunc(r1, imm);
+			if( r2 == exp )
+				correct = 1;	//No exception, correct result
+			else{
+				correct = 0;	//Incorrect result.
+				std::cout << "Incorrect result." << std::endl;
+				std::cout << "Result was: 0x" << r2 << std::endl;
+				std::cout << "--Expected: 0x" << exp << std::endl;
+			}
+		} catch(mips_error v){
+			correct = 0;		//No exception, should have
+			std::cout << "Incorrect result." << std::endl;
+			std::cout << "Result was: 0x" << r2 << std::endl;
+			std::cout << "--Expected: Exception " << v << std::endl;
+		}
+	}
+	else;
+	
 	std::string desc ="Check result of ";
 	desc += mipsInstruction[mnemonic].mnem;
 	desc += "-ing.";
 	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
 }
 
-uint32_t ADDverify(uint32_t r1, uint32_t r2, uint8_t shift){
-	return (signed)r1+(signed)r2;
+uint32_t ADDverify(uint32_t r1, uint32_t r2, uint8_t){
+	int64_t p = (signed)r1+(signed)r2;
+	if((~(unsigned)p)&0xFFFFFFFF00000000)
+		throw mips_ExceptionArithmeticOverflow;
+	else
+		return p&0xFFFFFFFF;
 }
 testResult ADDResult(mips_cpu_h cpu, mips_mem_h mem){
 	return RTypeResult(cpu, mem, ADD, (verifyFuncR)ADDverify);
 }
 
 uint32_t ADDIverify(uint32_t r1, uint16_t i){
-	return r1+(i&0x8000 ? 0xFFFF0000|i : i);
+	int64_t p = (signed)r1+(i&0x8000 ? 0xFFFF0000|i : i);
+	if((~p)&0xFFFFFFFF00000000)
+		throw mips_ExceptionArithmeticOverflow;
+	else
+		return p&0xFFFFFFFF;
 }
 testResult ADDIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, ADDI, (verifyFuncI)ADDIverify);
 }
 
-uint32_t ANDverify(uint32_t r1, uint32_t r2, uint8_t shift){
+uint32_t ADDIUverify(uint32_t r1, uint16_t i){
+	return r1+i;
+}
+testResult ADDIUResult(mips_cpu_h cpu, mips_mem_h mem){
+	return ITypeResult(cpu, mem, ADDIU, (verifyFuncI)ADDIUverify);
+}
+
+uint32_t ADDUverify(uint32_t r1, uint32_t r2, uint8_t){
+	return r1+r2;
+}
+testResult ADDUResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, ADDU, (verifyFuncR)ADDUverify);
+}
+
+uint32_t ANDverify(uint32_t r1, uint32_t r2, uint8_t){
 	return r1&r2;
 }
 testResult ANDResult(mips_cpu_h cpu, mips_mem_h mem){
