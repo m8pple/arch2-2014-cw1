@@ -319,6 +319,54 @@ END_TEST:
 	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
 }
 
+testResult hiloResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncHL verfunc){
+	int correct;
+	hilo exp;
+	try{
+		uint32_t r1 = rand(), r2 = rand();
+
+		mips_cpu_reset(cpu);
+		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, 0, 0).bufferedVal());
+		mips_mem_write(mem, 0x4, 4, Instruction(MFLO, 0, 0, 3, 0).bufferedVal());
+		mips_mem_write(mem, 0x8, 4, Instruction(MFHI, 0, 0, 4, 0).bufferedVal());
+		mips_cpu_set_register(cpu, 1, r1);
+		mips_cpu_set_register(cpu, 2, r2);
+		
+		mips_cpu_step(cpu);
+		mips_cpu_step(cpu);
+		mips_cpu_step(cpu);
+		
+		hilo got;
+		mips_cpu_get_register(cpu, 3, &(got.lo));
+		mips_cpu_get_register(cpu, 4, &(got.hi));
+		
+		try{
+			exp = verfunc(r1, r2);
+			correct = (got.lo == exp.lo) && (got.hi == exp.hi);
+		}
+		catch(mips_error){
+			//Result is undefined, so whatever happened was 'correct'
+			correct = 1;
+		}
+		
+		
+		if(!correct){
+			std::cout << "Incorrect result." << std::endl;
+			std::cout << "Result was: [0x" << got.hi << ", 0x" << got.lo << "]" << std::endl;
+			std::cout << "--Expected: [0x" << exp.hi << ", 0x" << exp.lo << "]" << std::endl;
+		}
+		
+	} catch(mips_error e){
+		correct = 0;
+		std::cout << "Error during operation: " << e << std::endl;
+	}
+
+	std::string desc = "Check result of ";
+	desc += mipsInstruction[mnemonic].mnem;
+	desc += "-ing.";
+	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
+}
+
 uint32_t ADDverify(uint32_t r1, uint32_t r2, uint8_t){
 	int64_t p = (signed)r1+(signed)r2;
 	if((~(unsigned)p)&0xFFFFFFFF00000000)
@@ -424,3 +472,54 @@ uint32_t BNEverify(uint32_t r1, uint32_t r2, uint16_t offset){
 testResult BNEResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BNE, (verifyFuncB)BNEverify);
 }
+
+hilo DIVverify(uint32_t r1, uint32_t r2){
+	if(r2 == 0)
+		throw mips_InternalError;
+	else
+		return {
+			(uint32_t)((signed)r1/(signed)r2),
+			(uint32_t)((signed)r1%(signed)r2)
+		};
+}
+testResult DIVResult(mips_cpu_h cpu, mips_mem_h mem){
+	return hiloResult(cpu, mem, DIV, DIVverify);
+}
+
+hilo DIVUverify(uint32_t r1, uint32_t r2){
+	if(r2 == 0)
+		throw mips_InternalError;
+	else
+		return {
+			r1/r2,
+			r1%r2
+		};
+}
+testResult DIVUResult(mips_cpu_h cpu, mips_mem_h mem){
+	return hiloResult(cpu, mem, DIVU, DIVUverify);
+}
+
+hilo MULTverify(uint32_t r1, uint32_t r2){
+	int64_t p = (signed)r1*(signed)r2;
+	return {
+		(uint32_t)((p&0xFFFFFFFF00000000)>>32),
+		(uint32_t)((p&0x00000000FFFFFFFF))
+	};
+}
+testResult MULTResult(mips_cpu_h cpu, mips_mem_h mem){
+	return hiloResult(cpu, mem, MULT, MULTverify);
+}
+
+hilo MULTUverify(uint32_t r1, uint32_t r2){
+	uint64_t p = r1*r2;
+	return {
+		(uint32_t)((p&0xFFFFFFFF00000000)>>32),
+		(uint32_t)((p&0x00000000FFFFFFFF))
+	};
+}
+testResult MULTUResult(mips_cpu_h cpu, mips_mem_h mem){
+	return hiloResult(cpu, mem, MULTU, MULTUverify);
+}
+
+
+

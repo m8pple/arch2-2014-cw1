@@ -10,7 +10,7 @@
 #define MIPS_NUM_REG	32U
 #endif
 
-#define NUM_TESTS		17U
+#define NUM_TESTS		21U
 
 #if DEBUG==1
 #include "mips_instr.h"
@@ -26,12 +26,19 @@ struct testResult{
 
 void runTest(testResult(*test)(mips_cpu_h, mips_mem_h), mips_cpu_h, mips_mem_h, unsigned=1024);
 
+struct hilo{
+	uint32_t hi;
+	uint32_t lo;
+};
+
 typedef int (*verifyFuncI)(uint32_t, uint16_t);
 typedef int (*verifyFuncR)(uint32_t, uint32_t, uint32_t);
 typedef int (*verifyFuncB)(uint32_t, uint32_t, uint32_t);
+typedef hilo (*verifyFuncHL)(uint32_t, uint32_t);
 testResult RTypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncR);
 testResult ITypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncI);
 testResult branchResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncB);
+testResult hiloResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncHL);
 
 testResult registerReset(mips_cpu_h, mips_mem_h);
 testResult memoryIO(mips_cpu_h, mips_mem_h);
@@ -50,6 +57,10 @@ testResult BLEZResult(mips_cpu_h, mips_mem_h);
 testResult BLTZResult(mips_cpu_h, mips_mem_h);
 testResult BLTZALResult(mips_cpu_h, mips_mem_h);
 testResult BNEResult(mips_cpu_h, mips_mem_h);
+testResult DIVResult(mips_cpu_h, mips_mem_h);
+testResult DIVUResult(mips_cpu_h, mips_mem_h);
+testResult MULTResult(mips_cpu_h, mips_mem_h);
+testResult MULTUResult(mips_cpu_h, mips_mem_h);
 
 testResult (*tests[NUM_TESTS])(mips_cpu_h, mips_mem_h) = {
 	registerReset,
@@ -68,5 +79,9 @@ testResult (*tests[NUM_TESTS])(mips_cpu_h, mips_mem_h) = {
 	BLEZResult,
 	BLTZResult,
 	BLTZALResult,
-	BNEResult
+	BNEResult,
+	DIVResult,
+	DIVUResult,
+	MULTResult,
+	MULTUResult
 };
