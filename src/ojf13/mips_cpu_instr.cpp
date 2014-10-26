@@ -41,9 +41,14 @@ uint32_t Instruction::regD(void) const{
 	else throw mips_InternalError;
 }
 uint32_t Instruction::shift(void) const{
-	if( type() == RType )
-		return (_value&MASK_SHFT)>>POS_SHFT;
-	else throw mips_InternalError;
+	switch( mnemonic() ){
+		case SRL:
+		case SRA:
+		case SLL:
+			return (_value&MASK_SHFT)>>POS_SHFT;
+		default:
+			throw mips_InternalError;
+	}
 }
 uint32_t Instruction::function(void) const{
 	if( type() == RType )
