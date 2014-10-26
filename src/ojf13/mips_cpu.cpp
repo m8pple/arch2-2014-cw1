@@ -146,7 +146,6 @@ void mips_cpu::step(void){
 	_stage = IF;
 	
 	fetchInstr();
-	_npc.internal_set(_npc.value()+4);
 	
 	_stage = ID;
 	
@@ -183,6 +182,8 @@ void mips_cpu::fetchInstr(){
 	_mem_ptr->read(buf, pc(), 4);
 	_ir.internal_set(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
 	std::cout << "Fetched 0x" << std::hex << (int)buf[0] << (int)buf[1] << (int)buf[2] << (int)buf[3] << std::endl;
+	
+	_npc.internal_set(_npc.value()+4);
 }
 
 void mips_cpu::decode(){
@@ -273,13 +274,13 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 }
 
 bool mips_cpu::accessMem(const uint32_t* aluOut){
-	std::cout << "Accessing memory device..." << std::endl;
-	uint8_t		buf[4];
-	
+	std::cout << "Accessing memory..." << std::endl;
+	uint8_t	buf[4];
+
 	switch(_irDecoded->mnemonic()){
 			//branch
 		case BEQ:
-			if(*aluOut==0){
+			if((signed)*aluOut==0){
 				std::cout << "Condition met. Taking branch next cycle." << std::endl;
 				uint32_t tmp = pc();
 				_pc.advance();
@@ -293,47 +294,106 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 			}
 			
 		case BGEZ:
-			~(*aluOut&0x80000000) ? _pc.advance() : _pc.advance();
-			return false;
+			if((signed)*aluOut>=0){
+				std::cout << "Condition met. Taking branch next cycle." << std::endl;
+				uint32_t tmp = pc();
+				_pc.advance();
+				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
+				//branch has no WB stage
+				return false;
+			} else{
+				std::cout << "Condition not met. Branch will not be taken." << std::endl;
+				_pc.advance();
+				return false;
+			}
 			
 		case BGEZAL:
-			if(~*aluOut&0x7FFFFFFF){
-				_pc.advance();
+			if((signed)*aluOut>=0){
 				link();
-			} else{
+				std::cout << "Condition met. Taking branch next cycle." << std::endl;
+				uint32_t tmp = pc();
 				_pc.advance();
+				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
+				
+				//branch has no WB stage
+				return false;
+			} else{
+				std::cout << "Condition not met. Branch will not be taken." << std::endl;
+				_pc.advance();
+				return false;
 			}
-			return false;
 			
 		case BGTZ:
-			if(~(*aluOut&0x80000000)){
+			if((signed)*aluOut>0){
+				std::cout << "Condition met. Taking branch next cycle." << std::endl;
+				uint32_t tmp = pc();
 				_pc.advance();
-				link();
+				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
+				//branch has no WB stage
+				return false;
 			} else{
+				std::cout << "Condition not met. Branch will not be taken." << std::endl;
 				_pc.advance();
+				return false;
 			}
-			return false;
 			
 		case BLEZ:
-			*aluOut&0x7FFFFFFF ? _pc.advance() : _pc.advance();
-			return false;
+			if((signed)*aluOut<=0){
+				std::cout << "Condition met. Taking branch next cycle." << std::endl;
+				uint32_t tmp = pc();
+				_pc.advance();
+				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
+				//branch has no WB stage
+				return false;
+			} else{
+				std::cout << "Condition not met. Branch will not be taken." << std::endl;
+				_pc.advance();
+				return false;
+			}
 		
 		case BLTZ:
-			*aluOut&0x7FFFFFFF && ~*aluOut ? _pc.advance() : _pc.advance();
-			return false;
+			if((signed)*aluOut<0){
+				std::cout << "Condition met. Taking branch next cycle." << std::endl;
+				uint32_t tmp = pc();
+				_pc.advance();
+				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
+				//branch has no WB stage
+				return false;
+			} else{
+				std::cout << "Condition not met. Branch will not be taken." << std::endl;
+				_pc.advance();
+				return false;
+			}
 			
 		case BLTZAL:
-			if(*aluOut&0x7FFFFFFF && ~*aluOut){
-				_pc.advance();
+			if((signed)*aluOut<0){
 				link();
-			} else{
+				std::cout << "Condition met. Taking branch next cycle." << std::endl;
+				uint32_t tmp = pc();
 				_pc.advance();
+				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
+				
+				//branch has no WB stage
+				return false;
+			} else{
+				std::cout << "Condition not met. Branch will not be taken." << std::endl;
+				_pc.advance();
+				return false;
 			}
-			return false;
 			
 		case BNE:
-			*aluOut ? _pc.advance() : _pc.advance();
-			return false;
+			if((signed)*aluOut!=0){
+				std::cout << "Condition met. Taking branch next cycle." << std::endl;
+				uint32_t tmp = pc();
+				_pc.advance();
+				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
+				//branch has no WB stage
+				return false;
+			} else{
+				std::cout << "Condition not met. Branch will not be taken." << std::endl;
+				_pc.advance();
+				return false;
+			}
 			
 			//load
 		case LB:
@@ -360,6 +420,8 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 }
 
 void mips_cpu::writeBack(const uint32_t* aluOut){
+	std::cout << "Writing back result..." << std::endl;
+	
 	switch(_irDecoded->type()){
 		case RType:
 			r[ _irDecoded->regD() ].value(*aluOut);
@@ -380,6 +442,7 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 			throw mips_InternalError;
 	}
 	
+	std::cout << "Advancing PC to NPC (0x" << _npc.value() << ")" << std::endl;
 	_pc.advance();
 }
 

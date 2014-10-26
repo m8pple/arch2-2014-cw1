@@ -266,7 +266,10 @@ testResult branchResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verif
 		uint32_t r1 = rand(), r2 = rand()%2 ? r1 : rand();
 		
 		mips_cpu_reset(cpu);
-		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, trgtOffset).bufferedVal());
+		if(mnemonic == BEQ || mnemonic == BNE)
+			mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, trgtOffset).bufferedVal());
+		else
+			mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, trgtOffset).bufferedVal());
 		mips_cpu_set_register(cpu, 1, r1);
 		mips_cpu_set_register(cpu, 2, r2);
 		
@@ -292,11 +295,21 @@ testResult branchResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verif
 			std::cout << "Incorrect result." << std::endl;
 			std::cout << "Result was: 0x" << after2 << std::endl;
 			std::cout << "--Expected: 0x" << exp << std::endl;
+		} else if( (mnemonic == BGEZAL || mnemonic == BLTZAL) && exp != 0x8 ){
+			uint32_t r31;
+			mips_cpu_get_register(cpu, 31, &r31);
+			correct = (r31 == 0x8);
+			
+			if(!correct){
+				std::cout << "Incorrect result." << std::endl;
+				std::cout << "Link register was: 0x" << r31 << std::endl;
+				std::cout << "---------Expected: 0x" << 0x8 << std::endl;
+			}
 		}
 
 	} catch(mips_error e){
 		correct = 0;
-		std::cout << "Error performing branch." << std::endl;
+		std::cout << "Error performing branch: " << e << std::endl;
 	}
 	
 END_TEST:
@@ -357,8 +370,57 @@ testResult ANDIResult(mips_cpu_h cpu, mips_mem_h mem){
 }
 
 uint32_t BEQverify(uint32_t r1, uint32_t r2, uint16_t offset){
-	return (r1==r2) ? 4+(offset<<2) : 8;
+	return ((signed)r1==(signed)r2) ? 4+(offset<<2) : 8;
 }
 testResult BEQResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BEQ, (verifyFuncB)BEQverify);
+}
+
+uint32_t BGEZverify(uint32_t r1, uint32_t, uint16_t offset){
+	return ((signed)r1>=(signed)0) ? 4+(offset<<2) : 8;
+}
+testResult BGEZResult(mips_cpu_h cpu, mips_mem_h mem){
+	return branchResult(cpu, mem, BGEZ, (verifyFuncB)BGEZverify);
+}
+
+uint32_t BGEZALverify(uint32_t r1, uint32_t, uint16_t offset){
+	return ((signed)r1>=(signed)0) ? 4+(offset<<2) : 8;
+}
+testResult BGEZALResult(mips_cpu_h cpu, mips_mem_h mem){
+	return branchResult(cpu, mem, BGEZAL, (verifyFuncB)BGEZALverify);
+}
+
+uint32_t BGTZverify(uint32_t r1, uint32_t, uint16_t offset){
+	return ((signed)r1>(signed)0) ? 4+(offset<<2) : 8;
+}
+testResult BGTZResult(mips_cpu_h cpu, mips_mem_h mem){
+	return branchResult(cpu, mem, BGTZ, (verifyFuncB)BGTZverify);
+}
+
+uint32_t BLEZverify(uint32_t r1, uint32_t, uint16_t offset){
+	return ((signed)r1<=(signed)0) ? 4+(offset<<2) : 8;
+}
+testResult BLEZResult(mips_cpu_h cpu, mips_mem_h mem){
+	return branchResult(cpu, mem, BLEZ, (verifyFuncB)BLEZverify);
+}
+
+uint32_t BLTZverify(uint32_t r1, uint32_t, uint16_t offset){
+	return ((signed)r1<(signed)0) ? 4+(offset<<2) : 8;
+}
+testResult BLTZResult(mips_cpu_h cpu, mips_mem_h mem){
+	return branchResult(cpu, mem, BLTZ, (verifyFuncB)BLTZverify);
+}
+
+uint32_t BLTZALverify(uint32_t r1, uint32_t, uint16_t offset){
+	return ((signed)r1<(signed)0) ? 4+(offset<<2) : 8;
+}
+testResult BLTZALResult(mips_cpu_h cpu, mips_mem_h mem){
+	return branchResult(cpu, mem, BLTZAL, (verifyFuncB)BLTZALverify);
+}
+
+uint32_t BNEverify(uint32_t r1, uint32_t r2, uint16_t offset){
+	return ((signed)r1!=(signed)r2) ? 4+(offset<<2) : 8;
+}
+testResult BNEResult(mips_cpu_h cpu, mips_mem_h mem){
+	return branchResult(cpu, mem, BNE, (verifyFuncB)BNEverify);
 }

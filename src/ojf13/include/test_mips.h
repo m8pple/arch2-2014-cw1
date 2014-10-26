@@ -10,7 +10,7 @@
 #define MIPS_NUM_REG	32U
 #endif
 
-#define NUM_TESTS		10U
+#define NUM_TESTS		17U
 
 #if DEBUG==1
 #include "mips_instr.h"
@@ -43,6 +43,13 @@ testResult ADDUResult(mips_cpu_h, mips_mem_h);
 testResult ANDResult(mips_cpu_h, mips_mem_h);
 testResult ANDIResult(mips_cpu_h, mips_mem_h);
 testResult BEQResult(mips_cpu_h, mips_mem_h);
+testResult BGEZResult(mips_cpu_h, mips_mem_h);
+testResult BGEZALResult(mips_cpu_h, mips_mem_h);
+testResult BGTZResult(mips_cpu_h, mips_mem_h);
+testResult BLEZResult(mips_cpu_h, mips_mem_h);
+testResult BLTZResult(mips_cpu_h, mips_mem_h);
+testResult BLTZALResult(mips_cpu_h, mips_mem_h);
+testResult BNEResult(mips_cpu_h, mips_mem_h);
 
 testResult (*tests[NUM_TESTS])(mips_cpu_h, mips_mem_h) = {
 	registerReset,
@@ -54,5 +61,12 @@ testResult (*tests[NUM_TESTS])(mips_cpu_h, mips_mem_h) = {
 	ADDUResult,
 	ANDResult,
 	ANDIResult,
-	BEQResult
+	BEQResult,
+	BGEZResult,
+	BGEZALResult,
+	BGTZResult,
+	BLEZResult,
+	BLTZResult,
+	BLTZALResult,
+	BNEResult
 };
