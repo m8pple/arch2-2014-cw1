@@ -53,8 +53,8 @@ void mips_reg_sp::internal_set(uint32_t iVal){
  */
 mips_reg_pc::mips_reg_pc(mips_reg_sp* npc) : _npc(npc), mips_reg_sp(){};
 
-void mips_reg_pc::advance(int32_t offset=0){
-	internal_set(_npc->value()+offset);
+void mips_reg_pc::advance(void){
+	internal_set(_npc->value());
 }
 //
 
@@ -143,8 +143,10 @@ void mips_cpu::reset(void){
 void mips_cpu::step(void){
 	uint32_t	aluOut;
 	
+	_stage = IF;
+	
 	fetchInstr();
-	_npc.internal_set(pc()+4);
+	_npc.internal_set(_npc.value()+4);
 	
 	_stage = ID;
 	
@@ -157,31 +159,13 @@ void mips_cpu::step(void){
 	
 	_stage = MEM;
 	// bit less magic
-	accessMem(&aluOut);
+	bool wb = accessMem(&aluOut);
 
-	_stage = WB;
-	// more magic
-	switch(_irDecoded->type()){
-		case RType:
-			r[ _irDecoded->regD() ].value(aluOut);
-			break;
-		case IType:
-			switch(_irDecoded->mnemonic()){
-				case LB:
-				case LBU:
-				case LW:
-				case LWL:
-				case LWR:
-					r[ _irDecoded->regT() ].value(_lmd.value());
-				default:
-					r[ _irDecoded->regT() ].value(aluOut);
-			}
-			break;
-		case JType:
-			throw mips_InternalError;
+	if(wb){
+		_stage = WB;
+		// more magic
+		writeBack(&aluOut);
 	}
-	
-	_pc.advance();
 }
 
 //make sure we know "we are the CPU" when setting
@@ -199,8 +183,6 @@ void mips_cpu::fetchInstr(){
 	_mem_ptr->read(buf, pc(), 4);
 	_ir.internal_set(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
 	std::cout << "Fetched 0x" << std::hex << (int)buf[0] << (int)buf[1] << (int)buf[2] << (int)buf[3] << std::endl;
-	_npc.internal_set(pc()+4);
-	std::cout << "Set NPC to: " << std::hex << _npc.value() << std::endl;
 }
 
 void mips_cpu::decode(){
@@ -233,7 +215,7 @@ void mips_cpu::decode(){
 void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 	std::cout << "Fetching registers..." << std::endl;
 	mips_instr_type type = _irDecoded->type();
-	bool isSigned;
+	bool isSigned = true;
 
 	//ALU inputs
 	switch(type){
@@ -252,18 +234,29 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 			break;
 		
 		case IType:
+			*aluInA = r[ _irDecoded->regS() ].value();
 			switch(_irDecoded->mnemonic()){
+				case BEQ:
+				case BGEZ:
+				case BGEZAL:
+				case BGTZ:
+				case BLEZ:
+				case BLTZ:
+				case BLTZAL:
+				case BNE:
+					*aluInB  = r[ _irDecoded->regT() ].value();
+					break;
 				case ADDIU:
 				case SLTIU:
+				case ANDI:
+				case ORI:
+				case XORI:
 					isSigned = false;
-					break;
 				default:
-					isSigned = true;
+					*aluInB	 = isSigned
+								? signExtendImdt(_irDecoded->immediate())
+								: _irDecoded->immediate();
 			}
-			*aluInA = r[ _irDecoded->regS() ].value();
-			*aluInB = isSigned
-						? signExtendImdt(_irDecoded->immediate())
-						: _irDecoded->immediate();
 			break;
 		
 		case JType:
@@ -279,59 +272,68 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 	std::cout << "Set ALU input B to: 0x" << std::hex << *aluInB << std::endl;
 }
 
-void mips_cpu::accessMem(const uint32_t* aluOut){
+bool mips_cpu::accessMem(const uint32_t* aluOut){
+	std::cout << "Accessing memory device..." << std::endl;
 	uint8_t		buf[4];
 	
 	switch(_irDecoded->mnemonic()){
 			//branch
 		case BEQ:
-			*aluOut ? _pc.advance() : _pc.advance(*aluOut);
-			//branch has no WB stage
-			_stage = IF;
-			return;
+			if(*aluOut==0){
+				std::cout << "Condition met. Taking branch next cycle." << std::endl;
+				uint32_t tmp = pc();
+				_pc.advance();
+				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
+				//branch has no WB stage
+				return false;
+			} else{
+				std::cout << "Condition not met. Branch will not be taken." << std::endl;
+				_pc.advance();
+				return false;
+			}
+			
 		case BGEZ:
-			~(*aluOut&0x80000000) ? _pc.advance(*aluOut) : _pc.advance();
-			_stage = IF;
-			return;
+			~(*aluOut&0x80000000) ? _pc.advance() : _pc.advance();
+			return false;
+			
 		case BGEZAL:
 			if(~*aluOut&0x7FFFFFFF){
-				_pc.advance(*aluOut);
+				_pc.advance();
 				link();
 			} else{
 				_pc.advance();
 			}
-			_stage = IF;
-			return;
+			return false;
+			
 		case BGTZ:
 			if(~(*aluOut&0x80000000)){
-				_pc.advance(*aluOut);
+				_pc.advance();
 				link();
 			} else{
 				_pc.advance();
 			}
-			_stage = IF;
-			return;
+			return false;
+			
 		case BLEZ:
-			*aluOut&0x7FFFFFFF ? _pc.advance(*aluOut) : _pc.advance();
-			_stage = IF;
-			return;
+			*aluOut&0x7FFFFFFF ? _pc.advance() : _pc.advance();
+			return false;
+		
 		case BLTZ:
-			*aluOut&0x7FFFFFFF && ~*aluOut ? _pc.advance(*aluOut) : _pc.advance();
-			_stage = IF;
-			return;
+			*aluOut&0x7FFFFFFF && ~*aluOut ? _pc.advance() : _pc.advance();
+			return false;
+			
 		case BLTZAL:
 			if(*aluOut&0x7FFFFFFF && ~*aluOut){
-				_pc.advance(*aluOut);
+				_pc.advance();
 				link();
 			} else{
 				_pc.advance();
 			}
-			_stage = IF;
-			return;
+			return false;
+			
 		case BNE:
-			aluOut ? _pc.advance(*aluOut) : _pc.advance();
-			_stage = IF;
-			return;
+			*aluOut ? _pc.advance() : _pc.advance();
+			return false;
 			
 			//load
 		case LB:
@@ -341,6 +343,7 @@ void mips_cpu::accessMem(const uint32_t* aluOut){
 		case LWR:
 			_mem_ptr->read(buf, *aluOut, 4);
 			_lmd.value(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
+			return true;
 			
 			//store
 		case SB:
@@ -349,10 +352,35 @@ void mips_cpu::accessMem(const uint32_t* aluOut){
 			for(int i=0; i<4; ++i)
 				buf[i] = (uint8_t)( ((_irDecoded->regT())>>(3-i)*8)&MASK_08b );
 			_mem_ptr->write(*aluOut, 4, buf);
+			return true;
 			
 		default:
-			break;
+			return true;
 	}
+}
+
+void mips_cpu::writeBack(const uint32_t* aluOut){
+	switch(_irDecoded->type()){
+		case RType:
+			r[ _irDecoded->regD() ].value(*aluOut);
+			break;
+		case IType:
+			switch(_irDecoded->mnemonic()){
+				case LB:
+				case LBU:
+				case LW:
+				case LWL:
+				case LWR:
+					r[ _irDecoded->regT() ].value(_lmd.value());
+				default:
+					r[ _irDecoded->regT() ].value(*aluOut);
+			}
+			break;
+		case JType:
+			throw mips_InternalError;
+	}
+	
+	_pc.advance();
 }
 
 void mips_cpu::link(void){

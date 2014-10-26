@@ -65,7 +65,7 @@ struct mips_reg_pc: mips_reg_sp{
 public:
 	mips_reg_pc(mips_reg_sp*);
 	
-	void advance(int32_t);
+	void advance(void);
 	
 private:
 	mips_reg_sp* _npc;
@@ -92,14 +92,14 @@ public:
 		alu_addu,		//ADDU " "
 		alu_and,		//AND
 		alu_and,		//ANDI " "
-		alu_addu,		//BEQ
-		alu_addu,		//BGEZ
-		alu_addu,		//BGEZAL
-		alu_addu,		//BGTZ		branches all do aluout <- npc+imm
-		alu_addu,		//BLEZ
-		alu_addu,		//BLTZ
-		alu_addu,		//BLTZAL
-		alu_addu,		//BNE
+		alu_sub,		//BEQ
+		alu_sub,		//BGEZ
+		alu_sub,		//BGEZAL
+		alu_sub,		//BGTZ
+		alu_sub,		//BLEZ
+		alu_sub,		//BLTZ
+		alu_sub,		//BLTZAL
+		alu_sub,		//BNE
 		alu_divide,		//DIV
 		alu_divideu,	//DIVU
 		alu_or,			//J does PC<- PC[31..28] || trgt<<2
@@ -170,7 +170,8 @@ protected:
 	void fetchInstr(void);
 	void decode(void);
 	void fetchRegs(uint32_t*, uint32_t*);
-	void accessMem(const uint32_t*);
+	bool accessMem(const uint32_t*);
+	void writeBack(const uint32_t*);
 	
 	void link(void);
 	uint32_t signExtendImdt(uint16_t);
