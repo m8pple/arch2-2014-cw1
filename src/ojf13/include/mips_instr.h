@@ -21,10 +21,10 @@
 #define POS_SREG    21U
 #define POS_TREG    16U
 #define POS_DREG    11U
-#define POS_SHFT	06U
-#define POS_FUNC    00U
-#define POS_IMDT	00U
-#define POS_TRGT	00U
+#define POS_SHFT	 6U
+#define POS_FUNC     0U
+#define POS_IMDT	 0U
+#define POS_TRGT	 0U
 
 #define MASK_OPCO	MASK_06b << POS_OPCO
 #define MASK_SREG	MASK_05b << POS_SREG
