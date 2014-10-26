@@ -96,6 +96,39 @@ testResult memoryIO(mips_cpu_h cpu, mips_mem_h mem){
 	return {"<INTERNAL>", "Check can read same value back after write.", correct};
 }
 
+testResult constInputs(mips_cpu_h cpu, mips_mem_h mem){
+	int correct = 1;
+	mips_mem_write(mem, 0x0, 4, Instruction(AND, 1, 2, 3, 0).bufferedVal());
+	
+	try{
+		uint32_t ir1 = rand();
+		uint32_t ir2 = rand();
+		mips_cpu_set_register(cpu, 1, ir1);
+		mips_cpu_set_register(cpu, 2, ir2);
+		
+		mips_cpu_set_pc(cpu, 0);
+		mips_cpu_step(cpu);
+		
+		mips_cpu_set_pc(cpu, 0);
+		mips_cpu_step(cpu);
+		
+		uint32_t or1,or2;
+		mips_cpu_get_register(cpu, 1, &or1);
+		mips_cpu_get_register(cpu, 2, &or2);
+		correct = (or1==ir1) && (or2==ir2);
+		
+		if(!correct){
+			std::cout << "Registers changed from: 0x" << ir1 << ", 0x" << ir2 << std::endl;
+			std::cout << "--------------------To: 0x" << or1 << ", 0x" << or2 << std::endl;
+		}
+		
+	} catch(mips_error e){
+		correct = 0;
+		std::cout << "Error (" << e << ") performing AND." << std::endl;
+	}
+	return {"<INTERNAL>", "Check input registers unchanged after AND-ing.", correct};
+}
+
 testResult RTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncR verfunc){
 	int correct = -1;
 	uint32_t r1, r2, r3, exp;
@@ -154,7 +187,7 @@ testResult RTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 	}
 	else;
 	
-	std::string desc ="Check result of ";
+	std::string desc = "Check result of ";
 	desc += mipsInstruction[mnemonic].mnem;
 	desc += "-ing.";
 	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
@@ -219,7 +252,55 @@ testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 	}
 	else;
 	
-	std::string desc ="Check result of ";
+	std::string desc = "Check result of ";
+	desc += mipsInstruction[mnemonic].mnem;
+	desc += "-ing.";
+	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
+}
+
+testResult branchResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncB verfunc){
+	int correct = -1;
+	
+	try{
+		int16_t trgtOffset = rand();
+		uint32_t r1 = rand(), r2 = rand()%2 ? r1 : rand();
+		
+		mips_cpu_reset(cpu);
+		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, trgtOffset).bufferedVal());
+		mips_cpu_set_register(cpu, 1, r1);
+		mips_cpu_set_register(cpu, 2, r2);
+		
+		uint32_t after1, after2;
+		mips_cpu_step(cpu);
+		mips_cpu_get_pc(cpu, &after1);
+		
+		correct = (after1 == 0x4);
+		
+		if(!correct){
+			std::cout << "Incorrect result." << std::endl;
+			std::cout << "PC at: 0x" << after1 << " after one cycle." << std::endl;
+			goto END_TEST;
+		}
+		
+		mips_cpu_step(cpu);
+		mips_cpu_get_pc(cpu, &after2);
+		
+		uint32_t exp = verfunc(r1, r2, trgtOffset);
+		correct = (after1 == 0x4) && (after2 == exp);
+		
+		if(!correct){
+			std::cout << "Incorrect result." << std::endl;
+			std::cout << "Result was: 0x" << after2 << std::endl;
+			std::cout << "--Expected: 0x" << exp << std::endl;
+		}
+
+	} catch(mips_error e){
+		correct = 0;
+		std::cout << "Error performing branch." << std::endl;
+	}
+	
+END_TEST:
+	std::string desc = "Check result of ";
 	desc += mipsInstruction[mnemonic].mnem;
 	desc += "-ing.";
 	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
@@ -268,35 +349,16 @@ testResult ANDResult(mips_cpu_h cpu, mips_mem_h mem){
 	return RTypeResult(cpu, mem, AND, (verifyFuncR)ANDverify);
 }
 
-testResult ANDInputs(mips_cpu_h cpu, mips_mem_h mem){
-	int correct = 1;
-	mips_mem_write(mem, 0x0, 4, Instruction(AND, 1, 2, 3, 0).bufferedVal());
-	
-	try{
-		uint32_t ir1 = rand();
-		uint32_t ir2 = rand();
-		mips_cpu_set_register(cpu, 1, ir1);
-		mips_cpu_set_register(cpu, 2, ir2);
-		
-		mips_cpu_set_pc(cpu, 0);
-		mips_cpu_step(cpu);
-	
-		mips_cpu_set_pc(cpu, 0);
-		mips_cpu_step(cpu);
-	
-		uint32_t or1,or2;
-		mips_cpu_get_register(cpu, 1, &or1);
-		mips_cpu_get_register(cpu, 2, &or2);
-		correct = (or1==ir1) && (or2==ir2);
-		
-		if(!correct){
-			std::cout << "Registers changed from: 0x" << ir1 << ", 0x" << ir2 << std::endl;
-			std::cout << "--------------------To: 0x" << or1 << ", 0x" << or2 << std::endl;
-		}
-
-	} catch(mips_error){
-		correct = 0;
-	}
-	return {"AND", "Check input registers unchanged after AND-ing.", correct};
+uint32_t ANDIverify(uint32_t r1, uint16_t i){
+	return r1&(0x00000000|i);
+}
+testResult ANDIResult(mips_cpu_h cpu, mips_mem_h mem){
+	return ITypeResult(cpu, mem, ANDI, (verifyFuncI)ANDIverify);
 }
 
+uint32_t BEQverify(uint32_t r1, uint32_t r2, uint16_t offset){
+	return (r1==r2) ? 4+(offset<<2) : 8;
+}
+testResult BEQResult(mips_cpu_h cpu, mips_mem_h mem){
+	return branchResult(cpu, mem, BEQ, (verifyFuncB)BEQverify);
+}
