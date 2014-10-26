@@ -10,7 +10,7 @@
 #define MIPS_NUM_REG	32U
 #endif
 
-#define NUM_TESTS		06U
+#define NUM_TESTS		 8U
 
 #if DEBUG==1
 #include "mips_instr.h"
@@ -35,6 +35,8 @@ testResult registerReset(mips_cpu_h, mips_mem_h);
 testResult memoryIO(mips_cpu_h, mips_mem_h);
 testResult ADDResult(mips_cpu_h, mips_mem_h);
 testResult ADDIResult(mips_cpu_h, mips_mem_h);
+testResult ADDIUResult(mips_cpu_h, mips_mem_h);
+testResult ADDUResult(mips_cpu_h, mips_mem_h);
 testResult ANDResult(mips_cpu_h, mips_mem_h);
 testResult ANDInputs(mips_cpu_h, mips_mem_h);
 
@@ -43,6 +45,8 @@ testResult (*tests[NUM_TESTS])(mips_cpu_h, mips_mem_h) = {
 	memoryIO,
 	ADDResult,
 	ADDIResult,
+	ADDIUResult,
+	ADDUResult,
 	ANDResult,
 	ANDInputs
 };
