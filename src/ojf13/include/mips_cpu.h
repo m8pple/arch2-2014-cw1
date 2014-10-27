@@ -103,6 +103,7 @@ private:
 	static hilo alu_shiftleft(uint32_t*, const uint32_t*, const uint32_t*);
 	static hilo alu_subtract(uint32_t*, const uint32_t*, const uint32_t*);
 	static hilo alu_subtractu(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_subtractnowrap(uint32_t*, const uint32_t*, const uint32_t*);
 	static hilo alu_shiftright(uint32_t*, const uint32_t*, const uint32_t*);
 	static hilo alu_shiftrightu(uint32_t*, const uint32_t*, const uint32_t*);
 	static hilo alu_xor(uint32_t*, const uint32_t*, const uint32_t*);

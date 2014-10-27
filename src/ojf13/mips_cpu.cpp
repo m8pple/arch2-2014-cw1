@@ -127,6 +127,8 @@ void mips_alu::setOperation(mips_asm mnem){
 			break;
 		case SLTIU:
 		case SLTU:
+			_operation = alu_subtractnowrap;
+			break;
 		case SUBU:
 			_operation = alu_subtractu;
 			break;
@@ -206,6 +208,10 @@ hilo mips_alu::alu_subtract(uint32_t* out, const uint32_t* a, const uint32_t* b)
 }
 hilo mips_alu::alu_subtractu(uint32_t* out, const uint32_t* a, const uint32_t* b){
 	*out = (*a)-(*b);
+	return {};
+}
+hilo mips_alu::alu_subtractnowrap(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	*out = (*a)<(*b) ? 0 : (*a)-(*b);
 	return {};
 }
 hilo mips_alu::alu_shiftright(uint32_t* out, const uint32_t* a, const uint32_t* b){
@@ -536,16 +542,25 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 	switch(_irDecoded->type()){
 		case RType:
 			switch(_irDecoded->mnemonic()){
+
+				case SLTU:// if rs<rt, alu does rs-rt, hence:
+					r[ _irDecoded->regD() ].value((unsigned)*aluOut ? 0 : 1);
+					break;
+				case SLT:
+					r[ _irDecoded->regD() ].value((signed)*aluOut>0 ? 0 : 1);
+					break;
+					
 				case DIV:
 				case DIVU:
 				case MULT:
 				case MULTU:
 					_hi.internal_set(_alu_hilo.hi);
 					_lo.internal_set(_alu_hilo.lo);
-				default:
 					break;
+					
+				default:
+					r[ _irDecoded->regD() ].value(*aluOut);
 			}
-			r[ _irDecoded->regD() ].value(*aluOut);
 			break;
 
 		case IType:
@@ -556,11 +571,21 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 				case LWL:
 				case LWR:
 					r[ _irDecoded->regT() ].value(_lmd.value());
+					break;
+					
+					
+				case SLTIU:
+					r[ _irDecoded->regT() ].value((unsigned)*aluOut ? 0 : 1);
+					break;
+				case SLTI:
+					r[ _irDecoded->regT() ].value((signed)*aluOut>0 ? 0 : 1);
+					break;
+					
 				default:
 					r[ _irDecoded->regT() ].value(*aluOut);
 			}
-
 			break;
+			
 		case JType:
 			throw mips_InternalError;
 	}

@@ -547,6 +547,48 @@ testResult SUBUResult(mips_cpu_h cpu, mips_mem_h mem){
 	return RTypeResult(cpu, mem, SUBU, (verifyFuncR)SUBUverify);
 }
 
+uint32_t SLLverify(uint32_t, uint32_t r1, uint8_t shift){
+	return r1<<shift;
+}
+testResult SLLResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, SLL, (verifyFuncR)SLLverify);
+}
+
+uint32_t SLLVverify(uint32_t r1, uint32_t r2, uint8_t){
+	return r2<<r1;
+}
+testResult SLLVResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, SLLV, (verifyFuncR)SLLVverify);
+}
+
+uint32_t SLTverify(uint32_t r1, uint32_t r2, uint8_t){
+	return ((signed)r1<(signed)r2) ? 1 : 0;
+}
+testResult SLTResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, SLT, (verifyFuncR)SLTverify);
+}
+
+uint32_t SLTIverify(uint32_t r1, uint16_t imm){
+	return ((signed)r1<(signed)(0x00000000|imm)) ? 1 : 0;
+}
+testResult SLTIResult(mips_cpu_h cpu, mips_mem_h mem){
+	return ITypeResult(cpu, mem, SLTI, (verifyFuncI)SLTIverify);
+}
+
+uint32_t SLTIUverify(uint32_t r1, uint16_t imm){
+	return (r1<(0x00000000|imm)) ? 1 : 0;
+}
+testResult SLTIUResult(mips_cpu_h cpu, mips_mem_h mem){
+	return ITypeResult(cpu, mem, SLTIU, (verifyFuncI)SLTIUverify);
+}
+
+uint32_t SLTUverify(uint32_t r1, uint32_t r2, uint8_t){
+	return (r1<r2) ? 1 : 0;
+}
+testResult SLTUResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, SLTU, (verifyFuncR)SLTUverify);
+}
+
 uint32_t SRAverify(uint32_t, uint32_t r1, uint8_t shift){
 	return (signed)r1>>shift;
 }
