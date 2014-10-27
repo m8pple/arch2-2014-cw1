@@ -197,6 +197,7 @@ hilo mips_alu::alu_multiplyu(uint32_t* out, const uint32_t* a, const uint32_t* b
 	};
 }
 hilo mips_alu::alu_shiftleft(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	*out = ((signed)*b) << (*a);
 	return {};
 }
 hilo mips_alu::alu_subtract(uint32_t* out, const uint32_t* a, const uint32_t* b){
@@ -208,11 +209,11 @@ hilo mips_alu::alu_subtractu(uint32_t* out, const uint32_t* a, const uint32_t* b
 	return {};
 }
 hilo mips_alu::alu_shiftright(uint32_t* out, const uint32_t* a, const uint32_t* b){
-	*out = ((signed)*a) >> (*b);
+	*out = ((signed)*b) >> (*a);
 	return {};
 }
 hilo mips_alu::alu_shiftrightu(uint32_t* out, const uint32_t* a, const uint32_t* b){
-	*out = (*a) >> (*b);
+	*out = (*b) >> (*a);
 	return {};
 }
 hilo mips_alu::alu_xor(uint32_t* out, const uint32_t* a, const uint32_t* b){

@@ -22,7 +22,7 @@ int main(){
 
 	for(int i=0; i<NUM_TESTS; ++i)
 		runTest(tests[i], cpu, mem, 1024);
-	
+	runTest(SRAResult, cpu, mem);
     mips_test_end_suite();
 	
     mips_cpu_free(cpu);
@@ -103,13 +103,10 @@ testResult constInputs(mips_cpu_h cpu, mips_mem_h mem){
 	try{
 		uint32_t ir1 = rand();
 		uint32_t ir2 = rand();
+		mips_cpu_reset(cpu);
 		mips_cpu_set_register(cpu, 1, ir1);
 		mips_cpu_set_register(cpu, 2, ir2);
-		
-		mips_cpu_set_pc(cpu, 0);
-		mips_cpu_step(cpu);
-		
-		mips_cpu_set_pc(cpu, 0);
+
 		mips_cpu_step(cpu);
 		
 		uint32_t or1,or2;
@@ -131,20 +128,17 @@ testResult constInputs(mips_cpu_h cpu, mips_mem_h mem){
 
 testResult RTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncR verfunc){
 	int correct = -1;
-	uint32_t r1, r2, r3, exp;
-	uint8_t shift;
+	uint32_t r1= rand(), r2=rand(), r3, exp;
+	uint8_t shift= rand()&(MASK_SHFT>>POS_SHFT);
 	
 	try{
-		uint8_t	shift = rand()&(MASK_SHFT>>POS_SHFT);
-		r1 = rand();
-		r2 = rand();
 		
 		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, 3, shift).bufferedVal());
 		
+		mips_cpu_reset(cpu);
 		mips_cpu_set_register(cpu, 1, r1);
 		mips_cpu_set_register(cpu, 2, r2);
-		
-		mips_cpu_set_pc(cpu, 0);
+
 		mips_cpu_step(cpu);
 		
 		mips_cpu_get_register(cpu, 3, &r3);
@@ -533,6 +527,45 @@ uint32_t ORIverify(uint32_t r1, uint16_t i){
 }
 testResult ORIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, ORI, (verifyFuncI)ORIverify);
+}
+
+uint32_t SUBverify(uint32_t r1, uint32_t r2, uint8_t){
+	int64_t p = (signed)r1-(signed)r2;
+	if((~(unsigned)p)&0xFFFFFFFF00000000)
+		throw mips_ExceptionArithmeticOverflow;
+	else
+		return p&0xFFFFFFFF;
+}
+testResult SUBResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, SUB, (verifyFuncR)SUBverify);
+}
+
+uint32_t SUBUverify(uint32_t r1, uint32_t r2, uint8_t){
+	return r1-r2;
+}
+testResult SUBUResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, SUBU, (verifyFuncR)SUBUverify);
+}
+
+uint32_t SRAverify(uint32_t, uint32_t r1, uint8_t shift){
+	return (signed)r1>>shift;
+}
+testResult SRAResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, SRA, (verifyFuncR)SRAverify);
+}
+
+uint32_t SRLverify(uint32_t, uint32_t r1, uint8_t shift){
+	return r1>>shift;
+}
+testResult SRLResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, SRL, (verifyFuncR)SRLverify);
+}
+
+uint32_t SRLVverify(uint32_t r1, uint32_t r2, uint8_t){
+	return r2>>r1;
+}
+testResult SRLVResult(mips_cpu_h cpu, mips_mem_h mem){
+	return RTypeResult(cpu, mem, SRLV, (verifyFuncR)SRLVverify);
 }
 
 uint32_t XORverify(uint32_t r1, uint32_t r2, uint8_t){
