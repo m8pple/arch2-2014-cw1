@@ -54,7 +54,9 @@ void mips_reg_sp::internal_set(uint32_t iVal){
 mips_reg_pc::mips_reg_pc(mips_reg_sp* npc) : _npc(npc), mips_reg_sp(){};
 
 void mips_reg_pc::advance(void){
+	std::cout << "Advancing PC to NPC (0x" << _npc->value() << ")" << std::endl;
 	internal_set(_npc->value());
+	_npc->internal_set(_npc->value()+4);
 }
 //
 
@@ -241,7 +243,7 @@ void mips_cpu::reset(void){
 		r[i].value(0);
 	
 	_pc.internal_set(0);
-	_npc.internal_set(0);
+	_npc.internal_set(4);
 	_ir.internal_set(0);
 	_hi.internal_set(0);
 	_lo.internal_set(0);
@@ -271,12 +273,14 @@ void mips_cpu::step(void){
 		_stage = WB;
 		// more magic
 		writeBack(&_alu_out);
+		_pc.advance();
 	}
 }
 
 //make sure we know "we are the CPU" when setting
 void mips_cpu::internal_pc_set(uint32_t iVal){
 	_pc.internal_set(iVal);
+	_npc.internal_set(iVal+4);
 }
 
 uint32_t mips_cpu::pc(void) const{
@@ -289,8 +293,6 @@ void mips_cpu::fetchInstr(){
 	_mem_ptr->read(buf, pc(), 4);
 	_ir.internal_set(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
 	std::cout << "Fetched 0x" << std::hex << (int)buf[0] << (int)buf[1] << (int)buf[2] << (int)buf[3] << std::endl;
-	
-	_npc.internal_set(_npc.value()+4);
 }
 
 void mips_cpu::decode(){
@@ -354,13 +356,15 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 		case IType:
 			*aluInA = r[ _irDecoded->regS() ].value();
 			switch(_irDecoded->mnemonic()){
-				case BEQ:
 				case BGEZ:
 				case BGEZAL:
 				case BGTZ:
 				case BLEZ:
 				case BLTZ:
 				case BLTZAL:
+					*aluInB  = 0;
+					break;
+				case BEQ:
 				case BNE:
 					*aluInB  = r[ _irDecoded->regT() ].value();
 					break;
@@ -392,14 +396,13 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 
 bool mips_cpu::accessMem(const uint32_t* aluOut){
 	std::cout << "Accessing memory..." << std::endl;
-	uint8_t	buf[4];
-
+	
 	switch(_irDecoded->mnemonic()){
 			//branch
 		case BEQ:
 			if((signed)*aluOut==0){
 				std::cout << "Condition met. Taking branch next cycle." << std::endl;
-				uint32_t tmp = pc();
+				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
 				//branch has no WB stage
@@ -413,7 +416,7 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 		case BGEZ:
 			if((signed)*aluOut>=0){
 				std::cout << "Condition met. Taking branch next cycle." << std::endl;
-				uint32_t tmp = pc();
+				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
 				//branch has no WB stage
@@ -428,10 +431,9 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 			if((signed)*aluOut>=0){
 				link();
 				std::cout << "Condition met. Taking branch next cycle." << std::endl;
-				uint32_t tmp = pc();
+				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-				
 				//branch has no WB stage
 				return false;
 			} else{
@@ -443,7 +445,7 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 		case BGTZ:
 			if((signed)*aluOut>0){
 				std::cout << "Condition met. Taking branch next cycle." << std::endl;
-				uint32_t tmp = pc();
+				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
 				//branch has no WB stage
@@ -457,7 +459,7 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 		case BLEZ:
 			if((signed)*aluOut<=0){
 				std::cout << "Condition met. Taking branch next cycle." << std::endl;
-				uint32_t tmp = pc();
+				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
 				//branch has no WB stage
@@ -471,7 +473,7 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 		case BLTZ:
 			if((signed)*aluOut<0){
 				std::cout << "Condition met. Taking branch next cycle." << std::endl;
-				uint32_t tmp = pc();
+				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
 				//branch has no WB stage
@@ -486,10 +488,9 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 			if((signed)*aluOut<0){
 				link();
 				std::cout << "Condition met. Taking branch next cycle." << std::endl;
-				uint32_t tmp = pc();
+				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-				
 				//branch has no WB stage
 				return false;
 			} else{
@@ -501,7 +502,7 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 		case BNE:
 			if((signed)*aluOut!=0){
 				std::cout << "Condition met. Taking branch next cycle." << std::endl;
-				uint32_t tmp = pc();
+				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
 				//branch has no WB stage
@@ -512,24 +513,40 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 				return false;
 			}
 			
+		case JAL:
+			link();
+		case J:
+			std::cout << "Jumping to 0x" << *aluOut << " next cycle." << std::endl;
+			_pc.advance();
+			_npc.internal_set(*aluOut);
+			//branch has no WB stage
+			return false;
+			
+			
 			//load
 		case LB:
 		case LBU:
 		case LW:
 		case LWL:
 		case LWR:
-			_mem_ptr->read(buf, *aluOut, 4);
-			_lmd.value(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
-			return true;
+			{
+				uint8_t	buf[4];
+				_mem_ptr->read(buf, *aluOut, 4);
+				_lmd.value(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
+				return true;
+			}
 			
 			//store
 		case SB:
 		case SH:
 		case SW:
-			for(int i=0; i<4; ++i)
-				buf[i] = (uint8_t)( ((_irDecoded->regT())>>(3-i)*8)&MASK_08b );
-			_mem_ptr->write(*aluOut, 4, buf);
-			return true;
+			{
+				uint8_t buf[4];
+				for(int i=0; i<4; ++i)
+					buf[i] = (uint8_t)( ((_irDecoded->regT())>>(3-i)*8)&MASK_08b );
+				_mem_ptr->write(*aluOut, 4, buf);
+				return true;
+			}
 			
 		default:
 			return true;
@@ -589,16 +606,21 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 		case JType:
 			throw mips_InternalError;
 	}
-	
-	std::cout << "Advancing PC to NPC (0x" << _npc.value() << ")" << std::endl;
-	_pc.advance();
 }
 
 void mips_cpu::link(void){
+	std::cout << "Linking 0x" << _npc.value()+4 << std::endl;
 	r[31].value(_npc.value()+4);
 }
 
 uint32_t mips_cpu::signExtendImdt(uint16_t imm){
-	return ( (imm&(MASK_IMDT>>1)) != imm ) ? imm|~MASK_IMDT : imm;
+	std::cout << "Sign extending immediate: 0x" << imm << std::endl;
+	if( (imm&(MASK_IMDT>>1)) != imm ){
+		std::cout << "-------------Padding 1's: 0x" << (imm|~MASK_IMDT) << std::endl;
+		return imm|~MASK_IMDT;
+	} else {
+		std::cout << "-------------Padding 0's: 0x" << imm << std::endl;
+		return imm;
+	};
 }
 //

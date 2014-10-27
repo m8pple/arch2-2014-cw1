@@ -14,15 +14,21 @@
 #include <iostream>
 
 int main(){
-    mips_mem_h mem = mips_mem_create_ram(1<<5, 4);
+    mips_mem_h mem = mips_mem_create_ram(1<<31, 4);
     mips_cpu_h cpu = mips_cpu_create(mem);
-	
 	srand((unsigned)time(NULL));
+	
     mips_test_begin_suite();
 
-	for(int i=0; i<NUM_TESTS; ++i)
-		runTest(tests[i], cpu, mem, 1024);
-	runTest(SRAResult, cpu, mem);
+	for(int i=0; i<NUM_OP_TESTS; ++i)
+		runTest(opTests[i], cpu, mem, 1024);
+	
+	runTest(constInputs, cpu, mem, 1);		//
+	runTest(registerReset, cpu, mem, 1);	// It's hard to imagine that the correctness
+	runTest(memoryIO, cpu, mem, 1);			//	of these would be input-dependent without
+	runTest(noOperation, cpu, mem, 1);		//	everything else failing hard, so only do once.
+											//
+	
     mips_test_end_suite();
 	
     mips_cpu_free(cpu);
@@ -124,6 +130,33 @@ testResult constInputs(mips_cpu_h cpu, mips_mem_h mem){
 		std::cout << "Error (" << e << ") performing AND." << std::endl;
 	}
 	return {"<INTERNAL>", "Check input registers unchanged after AND-ing.", correct};
+}
+
+testResult noOperation(mips_cpu_h cpu, mips_mem_h mem){
+	int correct = 1;
+	mips_mem_write(mem, 0x0, 4, Instruction(SLL, 0, 0, 0, 0).bufferedVal());
+	
+	try{
+		mips_cpu_reset(cpu);
+		mips_cpu_step(cpu);
+		
+		uint32_t r[MIPS_NUM_REG];
+		int i;
+		for(i=0; i<MIPS_NUM_REG; ++i){
+			mips_cpu_get_register(cpu, i, &r[i]);
+			correct &= ~r[i];
+			if(!correct)
+				break;	//to keep idx of non-zero reg
+		}
+		
+		if(!correct)
+			std::cout << "GP reg " << i << " got set during NOP." << std::endl;
+		
+	} catch(mips_error e){
+		correct = 0;
+		std::cout << "Error (" << e << ") performing NOP (SLL 0)." << std::endl;
+	}
+	return {"<INTERNAL>", "Check only PC changes after NOP.", correct};
 }
 
 testResult RTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncR verfunc){
@@ -252,6 +285,84 @@ testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
 }
 
+testResult JTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncJ verfunc){
+	int correct = -1;
+	uint32_t pcInit;
+	
+	try{
+		uint32_t index = rand()&0x03FFFFFC;	//26 bits, aligned
+		try{
+			pcInit= rand()&0x0000FFFC;	//seems reasonable
+			mips_mem_write(mem, pcInit, 4, Instruction(mnemonic, index).bufferedVal());
+			
+			//Make sure not a J/B instruction in the delay slot (UB)
+			uint8_t tmp[4]={0};
+			mips_mem_write(mem, pcInit+4, 4, tmp);
+			
+		} catch(mips_error e){
+			if(e == mips_ExceptionInvalidAddress){
+				pcInit = 0;				//just in case..
+				mips_mem_write(mem, pcInit, 4, Instruction(mnemonic, index).bufferedVal());
+				
+				//Make sure not a J/B instruction in the delay slot (UB)
+				uint8_t tmp[4]={0};
+				mips_mem_write(mem, pcInit+4, 4, tmp);
+			}
+			else
+				throw e;				//ouch
+		}
+		
+		mips_cpu_reset(cpu);
+		mips_cpu_set_pc(cpu, pcInit);
+		
+		uint32_t after1, after2;
+		mips_cpu_step(cpu);
+		mips_cpu_get_pc(cpu, &after1);
+		
+		correct = (after1 == pcInit+4);
+		
+		if(correct == 0){
+			std::cout << "Incorrect PC." << std::endl;
+			std::cout << "---PC at: 0x" << after1 << " during branch delay slot;" << std::endl;
+			std::cout << "Expected: 0x" << pcInit+4 << std::endl;
+			goto END_TEST;	//egh.. sorry
+		}
+		
+		mips_cpu_step(cpu);
+		mips_cpu_get_pc(cpu, &after2);
+		
+		uint32_t exp = verfunc(pcInit, index);
+		correct = (after2 == exp);
+		
+		if(correct == 0){
+			std::cout << "Incorrect jump." << std::endl;
+			std::cout << "Result was: 0x" << after2 << std::endl;
+			std::cout << "--Expected: 0x" << exp << std::endl;
+		} else if( mnemonic == JAL ){
+			uint32_t r31;
+			mips_cpu_get_register(cpu, 31, &r31);
+			correct = (r31 == pcInit+8);
+			
+			if(correct == 0){
+				std::cout << "Incorrect link." << std::endl;
+				std::cout << "Link register was: 0x" << r31 << std::endl;
+				std::cout << "---------Expected: 0x" << pcInit+8 << std::endl;
+			}
+		}
+		
+	} catch(mips_error e){
+		correct = 0;
+		std::cout << "Error performing branch: " << e << std::endl;
+	};
+
+END_TEST:
+	std::string desc = "Check result of ";
+	desc += mipsInstruction[mnemonic].mnem;
+	desc += "-ing.";
+	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
+}
+
+
 testResult branchResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncB verfunc){
 	int correct = -1;
 	
@@ -260,10 +371,20 @@ testResult branchResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verif
 		uint32_t r1 = rand(), r2 = rand()%2 ? r1 : rand();
 		
 		mips_cpu_reset(cpu);
-		if(mnemonic == BEQ || mnemonic == BNE)
+		if(mnemonic == BEQ || mnemonic == BNE){
 			mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, trgtOffset).bufferedVal());
-		else
+			
+			//Make sure not a J/B instruction in the delay slot (UB)
+			uint8_t tmp[4]={0};
+			mips_mem_write(mem, 0x4, 4, tmp);
+		}
+		else{
 			mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, trgtOffset).bufferedVal());
+			
+			//Make sure not a J/B instruction in the delay slot (UB)
+			uint8_t tmp[4]={0};
+			mips_mem_write(mem, 0x4, 4, tmp);
+		}
 		mips_cpu_set_register(cpu, 1, r1);
 		mips_cpu_set_register(cpu, 2, r2);
 		
@@ -273,9 +394,10 @@ testResult branchResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verif
 		
 		correct = (after1 == 0x4);
 		
-		if(!correct){
+		if(correct == 0){
 			std::cout << "Incorrect result." << std::endl;
-			std::cout << "PC at: 0x" << after1 << " after one cycle." << std::endl;
+			std::cout << "---PC at: 0x" << after1 << " during branch delay slot;" << std::endl;
+			std::cout << "Expected: 0x" << 4 << std::endl;
 			goto END_TEST;
 		}
 		
@@ -285,16 +407,16 @@ testResult branchResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verif
 		uint32_t exp = verfunc(r1, r2, trgtOffset);
 		correct = (after1 == 0x4) && (after2 == exp);
 		
-		if(!correct){
+		if(correct == 0){
 			std::cout << "Incorrect result." << std::endl;
-			std::cout << "Result was: 0x" << after2 << std::endl;
-			std::cout << "--Expected: 0x" << exp << std::endl;
+			std::cout << "Branched to: 0x" << after2 << std::endl;
+			std::cout << "---Expected: 0x" << exp << std::endl;
 		} else if( (mnemonic == BGEZAL || mnemonic == BLTZAL) && exp != 0x8 ){
 			uint32_t r31;
 			mips_cpu_get_register(cpu, 31, &r31);
 			correct = (r31 == 0x8);
 			
-			if(!correct){
+			if(correct == 0){
 				std::cout << "Incorrect result." << std::endl;
 				std::cout << "Link register was: 0x" << r31 << std::endl;
 				std::cout << "---------Expected: 0x" << 0x8 << std::endl;
@@ -466,7 +588,7 @@ uint32_t BNEverify(uint32_t r1, uint32_t r2, uint16_t offset){
 testResult BNEResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BNE, (verifyFuncB)BNEverify);
 }
-
+/* (DIV|MULT)U? tests also implicitly test MFHI, MFLO */
 hilo DIVverify(uint32_t r1, uint32_t r2){
 	if(r2 == 0)
 		throw mips_InternalError;
@@ -491,6 +613,20 @@ hilo DIVUverify(uint32_t r1, uint32_t r2){
 }
 testResult DIVUResult(mips_cpu_h cpu, mips_mem_h mem){
 	return hiloResult(cpu, mem, DIVU, DIVUverify);
+}
+
+uint32_t Jverify(uint32_t pcPrior, uint32_t idx){
+	return (pcPrior&0xF0000000)|(idx<<2);
+}
+testResult JResult(mips_cpu_h cpu, mips_mem_h mem){
+	return JTypeResult(cpu, mem, J, Jverify);
+}
+
+uint32_t JALverify(uint32_t pcPrior, uint32_t idx){
+	return (pcPrior&0xF0000000)|(idx<<2);
+}
+testResult JALResult(mips_cpu_h cpu, mips_mem_h mem){
+	return JTypeResult(cpu, mem, JAL, JALverify);
 }
 
 hilo MULTverify(uint32_t r1, uint32_t r2){

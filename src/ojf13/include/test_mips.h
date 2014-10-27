@@ -10,7 +10,7 @@
 #define MIPS_NUM_REG	32U
 #endif
 
-#define NUM_TESTS		36U
+#define NUM_OP_TESTS	35U
 
 #if DEBUG==1
 #include "mips_instr.h"
@@ -31,18 +31,22 @@ struct hilo{
 	uint32_t lo;
 };
 
-typedef int (*verifyFuncI)(uint32_t, uint16_t);
-typedef int (*verifyFuncR)(uint32_t, uint32_t, uint32_t);
-typedef int (*verifyFuncB)(uint32_t, uint32_t, uint32_t);
+typedef uint32_t (*verifyFuncR)(uint32_t, uint32_t, uint32_t);
+typedef uint32_t (*verifyFuncI)(uint32_t, uint16_t);
+typedef uint32_t (*verifyFuncB)(uint32_t, uint32_t, uint32_t);
+typedef uint32_t (*verifyFuncJ)(uint32_t, uint32_t);
 typedef hilo (*verifyFuncHL)(uint32_t, uint32_t);
 testResult RTypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncR);
 testResult ITypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncI);
 testResult branchResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncB);
+testResult JTypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncJ);
 testResult hiloResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncHL);
 
 testResult registerReset(mips_cpu_h, mips_mem_h);
 testResult memoryIO(mips_cpu_h, mips_mem_h);
 testResult constInputs(mips_cpu_h, mips_mem_h);
+testResult noOperation(mips_cpu_h, mips_mem_h);
+
 testResult ADDResult(mips_cpu_h, mips_mem_h);
 testResult ADDIResult(mips_cpu_h, mips_mem_h);
 testResult ADDIUResult(mips_cpu_h, mips_mem_h);
@@ -59,6 +63,9 @@ testResult BLTZALResult(mips_cpu_h, mips_mem_h);
 testResult BNEResult(mips_cpu_h, mips_mem_h);
 testResult DIVResult(mips_cpu_h, mips_mem_h);
 testResult DIVUResult(mips_cpu_h, mips_mem_h);
+testResult JResult(mips_cpu_h, mips_mem_h);
+testResult JALResult(mips_cpu_h, mips_mem_h);
+
 testResult MULTResult(mips_cpu_h, mips_mem_h);
 testResult MULTUResult(mips_cpu_h, mips_mem_h);
 testResult ORResult(mips_cpu_h, mips_mem_h);
@@ -79,10 +86,7 @@ testResult SUBUResult(mips_cpu_h, mips_mem_h);
 testResult XORResult(mips_cpu_h, mips_mem_h);
 testResult XORIResult(mips_cpu_h, mips_mem_h);
 
-testResult (*tests[NUM_TESTS])(mips_cpu_h, mips_mem_h) = {
-	registerReset,
-	memoryIO,
-	constInputs,
+testResult (*opTests[NUM_OP_TESTS])(mips_cpu_h, mips_mem_h) = {
 	ADDResult,
 	ADDIResult,
 	ADDIUResult,
@@ -99,6 +103,9 @@ testResult (*tests[NUM_TESTS])(mips_cpu_h, mips_mem_h) = {
 	BNEResult,
 	DIVResult,
 	DIVUResult,
+	JResult,
+	JALResult,
+	
 	MULTResult,
 	MULTUResult,
 	ORResult,
