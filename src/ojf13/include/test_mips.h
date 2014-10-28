@@ -10,7 +10,7 @@
 #define MIPS_NUM_REG	32U
 #endif
 
-#define NUM_OP_TESTS	35U
+#define NUM_OP_TESTS	36U
 
 #if DEBUG==1
 #include "mips_instr.h"
@@ -65,6 +65,7 @@ testResult DIVResult(mips_cpu_h, mips_mem_h);
 testResult DIVUResult(mips_cpu_h, mips_mem_h);
 testResult JResult(mips_cpu_h, mips_mem_h);
 testResult JALResult(mips_cpu_h, mips_mem_h);
+testResult JRResult(mips_cpu_h, mips_mem_h);
 
 testResult MULTResult(mips_cpu_h, mips_mem_h);
 testResult MULTUResult(mips_cpu_h, mips_mem_h);
@@ -105,6 +106,7 @@ testResult (*opTests[NUM_OP_TESTS])(mips_cpu_h, mips_mem_h) = {
 	DIVUResult,
 	JResult,
 	JALResult,
+	JRResult,
 	
 	MULTResult,
 	MULTUResult,

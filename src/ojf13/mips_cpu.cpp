@@ -341,11 +341,11 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 					//MFHI/LO OR respective with 0
 				case MFHI:
 					*aluInA = _hi.value();
-					*aluInB = 0;
+					//*aluInB = 0;	//not necessary if strictly mandate zeroes instead ignore?
 					break;
 				case MFLO:
 					*aluInA = _lo.value();
-					*aluInB = 0;
+					//*aluInB = 0;
 					break;
 				
 				default:
@@ -516,6 +516,7 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 		case JAL:
 			link();
 		case J:
+		case JR:
 			std::cout << "Jumping to 0x" << *aluOut << " next cycle." << std::endl;
 			_pc.advance();
 			_npc.internal_set(*aluOut);

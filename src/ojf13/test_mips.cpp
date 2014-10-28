@@ -21,7 +21,7 @@ int main(){
     mips_test_begin_suite();
 
 	for(int i=0; i<NUM_OP_TESTS; ++i)
-		runTest(opTests[i], cpu, mem, 1024);
+		runTest(opTests[i], cpu, mem, 256);
 	
 	runTest(constInputs, cpu, mem, 1);		//
 	runTest(registerReset, cpu, mem, 1);	// It's hard to imagine that the correctness
@@ -284,16 +284,22 @@ testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 	desc += "-ing.";
 	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
 }
-
+/* Includes JR, which is RType, but easier to test with J,JAL */
 testResult JTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncJ verfunc){
 	int correct = -1;
 	uint32_t pcInit;
+	mips_cpu_reset(cpu);
 	
 	try{
 		uint32_t index = rand()&0x03FFFFFC;	//26 bits, aligned
 		try{
-			pcInit= rand()&0x0000FFFC;	//seems reasonable
-			mips_mem_write(mem, pcInit, 4, Instruction(mnemonic, index).bufferedVal());
+			pcInit= rand()&0x0000FFFC;		//seems reasonable
+			if(mnemonic == JR){
+				mips_cpu_set_register(cpu, 1, index);
+				mips_mem_write(mem, pcInit, 4, Instruction(mnemonic, 1, 0,0,0).bufferedVal());
+			}
+			else
+				mips_mem_write(mem, pcInit, 4, Instruction(mnemonic, index).bufferedVal());
 			
 			//Make sure not a J/B instruction in the delay slot (UB)
 			uint8_t tmp[4]={0};
@@ -301,7 +307,7 @@ testResult JTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 			
 		} catch(mips_error e){
 			if(e == mips_ExceptionInvalidAddress){
-				pcInit = 0;				//just in case..
+				pcInit = 0;					//just in case..
 				mips_mem_write(mem, pcInit, 4, Instruction(mnemonic, index).bufferedVal());
 				
 				//Make sure not a J/B instruction in the delay slot (UB)
@@ -309,10 +315,9 @@ testResult JTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 				mips_mem_write(mem, pcInit+4, 4, tmp);
 			}
 			else
-				throw e;				//ouch
+				throw e;					//ouch
 		}
-		
-		mips_cpu_reset(cpu);
+
 		mips_cpu_set_pc(cpu, pcInit);
 		
 		uint32_t after1, after2;
@@ -627,6 +632,13 @@ uint32_t JALverify(uint32_t pcPrior, uint32_t idx){
 }
 testResult JALResult(mips_cpu_h cpu, mips_mem_h mem){
 	return JTypeResult(cpu, mem, JAL, JALverify);
+}
+
+uint32_t JRverify(uint32_t, uint32_t r1){
+	return r1;
+}
+testResult JRResult(mips_cpu_h cpu, mips_mem_h mem){
+	return JTypeResult(cpu, mem, JR, JRverify);
 }
 
 hilo MULTverify(uint32_t r1, uint32_t r2){
