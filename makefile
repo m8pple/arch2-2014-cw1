@@ -3,7 +3,7 @@
 LOGIN ?= eie2ugs
 
 CPPFLAGS += -W -Wall -g
-CPPFLAGS += -I include
+CPPFLAGS += -I include -I src/$(LOGIN)
 
 CFLAGS	 += -std=c99
 CXXFLAGS += -std=c++11
