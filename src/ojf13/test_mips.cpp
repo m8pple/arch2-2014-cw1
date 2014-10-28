@@ -20,7 +20,7 @@ int main(){
 	
     mips_test_begin_suite();
 
-	for(int i=0; i<NUM_OP_TESTS; ++i)
+	for(unsigned i=0; i<NUM_OP_TESTS; ++i)
 		runTest(opTests[i], cpu, mem, 256);
 	
 	runTest(constInputs, cpu, mem, 1);		//
@@ -41,7 +41,7 @@ void runTest(testResult(*test)(mips_cpu_h, mips_mem_h),
 
 	testResult result;
  
-	for(int i=0; i<runs; ++i){
+	for(unsigned i=0; i<runs; ++i){
 		result = test(cpu, mem);
 		mips_test_end_test(mips_test_begin_test(result.instr),
 						   result.passed, result.desc);
@@ -49,12 +49,12 @@ void runTest(testResult(*test)(mips_cpu_h, mips_mem_h),
 	
 }
 
-testResult registerReset(mips_cpu_h cpu, mips_mem_h mem){
+testResult registerReset(mips_cpu_h cpu, mips_mem_h){
     uint32_t got;
     int correct, i=0;
     
     try{
-		for(int i=0; i<MIPS_NUM_REG; ++i)
+		for(unsigned i=0; i<MIPS_NUM_REG; ++i)
 			mips_cpu_set_register(cpu, i, rand());
 		mips_cpu_set_pc(cpu, rand());
 		
@@ -78,22 +78,22 @@ testResult registerReset(mips_cpu_h cpu, mips_mem_h mem){
     return {"<INTERNAL>", "Check all registers zeroed after reset.", correct};
 }
 
-testResult memoryIO(mips_cpu_h cpu, mips_mem_h mem){
+testResult memoryIO(mips_cpu_h, mips_mem_h mem){
 	int correct = 1;
 	
 	try{
 		uint8_t ibuf[4] = {
-			(uint8_t)(rand()%(1<<31)),
-			(uint8_t)(rand()%(1<<31)),
-			(uint8_t)(rand()%(1<<31)),
-			(uint8_t)(rand()%(1<<31))
+			(uint8_t)rand(),
+			(uint8_t)rand(),
+			(uint8_t)rand(),
+			(uint8_t)rand()
 		};
 		mips_mem_write(mem, 0x0, 4, ibuf);
 		
 		uint8_t obuf[4];
 		mips_mem_read(mem, 0x0, 4, obuf);
 		
-		for(int i=0; i<4; ++i)
+		for(unsigned i=0; i<4; ++i)
 			correct &= obuf[i]==ibuf[i] ? 1 : 0;
 	
 	} catch(mips_error) {
@@ -141,7 +141,7 @@ testResult noOperation(mips_cpu_h cpu, mips_mem_h mem){
 		mips_cpu_step(cpu);
 		
 		uint32_t r[MIPS_NUM_REG];
-		int i;
+		unsigned i;
 		for(i=0; i<MIPS_NUM_REG; ++i){
 			mips_cpu_get_register(cpu, i, &r[i]);
 			correct &= ~r[i];

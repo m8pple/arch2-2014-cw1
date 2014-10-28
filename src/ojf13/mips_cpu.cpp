@@ -247,10 +247,12 @@ void mips_cpu::reset(void){
 	_ir.internal_set(0);
 	_hi.internal_set(0);
 	_lo.internal_set(0);
+	
+	std::cout << std::endl << "CPU was reset." << std::endl << std::endl;
 }
 
 void mips_cpu::step(void){
-	//uint32_t	aluOut;
+	//std::cout << std::endl << "Stepping. PC at: 0x" << pc() << std::endl;
 	
 	_stage = IF;
 	
@@ -290,8 +292,9 @@ uint32_t mips_cpu::pc(void) const{
 void mips_cpu::fetchInstr(){
 	std::cout << "Fetching instruction..." << std::endl;
 	uint8_t	buf[4];
-	_mem_ptr->read(buf, pc(), 4);
-	_ir.internal_set(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
+	uint32_t word = _mem_ptr->read(pc());
+	_ir.internal_set(word);
+	//_ir.internal_set(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
 	std::cout << "Fetched 0x" << std::hex << (int)buf[0] << (int)buf[1] << (int)buf[2] << (int)buf[3] << std::endl;
 }
 
@@ -531,9 +534,10 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 		case LWL:
 		case LWR:
 			{
-				uint8_t	buf[4];
-				_mem_ptr->read(buf, *aluOut, 4);
-				_lmd.value(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
+				//uint8_t	buf[4];
+				_lmd.value( _mem_ptr->read(*aluOut) );
+				//_mem_ptr->readBytes(buf, *aluOut, 4);
+				//_lmd.value(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
 				return true;
 			}
 			
@@ -542,10 +546,11 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 		case SH:
 		case SW:
 			{
-				uint8_t buf[4];
-				for(int i=0; i<4; ++i)
-					buf[i] = (uint8_t)( ((_irDecoded->regT())>>(3-i)*8)&MASK_08b );
-				_mem_ptr->write(*aluOut, 4, buf);
+				//uint8_t buf[4];
+				//for(int i=0; i<4; ++i)
+				//	buf[i] = (uint8_t)( ((_irDecoded->regT())>>(3-i)*8)&MASK_08b );
+				//_mem_ptr->writeBytes(*aluOut, 4, buf);
+				_mem_ptr->write(*aluOut, _irDecoded->regT());
 				return true;
 			}
 			

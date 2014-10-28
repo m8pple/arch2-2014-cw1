@@ -11,7 +11,7 @@
 mips_error mips_mem_read(const mips_mem_h mem, uint32_t addr,  uint32_t len, uint8_t *obuf){
 	mips_error ret = mips_Success;
 	try{
-		((mips_mem*)mem)->read(obuf, addr, len);
+		((mips_mem*)mem)->readBytes(obuf, addr, len);
 	} catch(mips_error ret){};
 	
 	return ret;
@@ -20,7 +20,7 @@ mips_error mips_mem_read(const mips_mem_h mem, uint32_t addr,  uint32_t len, uin
 mips_error mips_mem_write(mips_mem_h mem, uint32_t addr, uint32_t len, const uint8_t *ibuf){
 	mips_error ret = mips_Success;
 	try {
-		((mips_mem*)mem)->write(addr, len, ibuf);
+		((mips_mem*)mem)->writeBytes(addr, len, ibuf);
 	} catch (mips_error ret){};
 	
 	return ret;

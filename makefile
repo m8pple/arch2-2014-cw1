@@ -3,13 +3,9 @@
 LOGIN ?= ojf13
 
 CPPFLAGS += -W -Wall -g
-CPPFLAGS += -I include
+CPPFLAGS += -I include -I src/$(LOGIN)
 
-<<<<<<< HEAD
 CFLAGS += -std=c99
-=======
-CFLAGS	 += -std=c99
->>>>>>> bbd17d442e787d30daed02ae898e8ed694a75319
 CXXFLAGS += -std=c++11
 
 # Force the inclusion of C++ standard libraries
@@ -27,7 +23,15 @@ USER_CPU_SRCS = \
     
 USER_CPU_OBJECTS = $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(USER_CPU_SRCS)))
 
-src/$(LOGIN)/test_mips : $(DEFAULT_OBJECTS) $(USER_CPU_OBJECTS)
+USER_TEST_SRCS = \
+    $(wildcard src/$(LOGIN)/test_mips.c) \
+    $(wildcard src/$(LOGIN)/test_mips.cpp) \
+    $(wildcard src/$(LOGIN)/test_mips*.c) \
+    $(wildcard src/$(LOGIN)/test_mips_*.cpp)
+
+USER_TEST_OBJECTS = $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(USER_TEST_SRCS)))
+
+src/$(LOGIN)/test_mips : $(USER_TEST_OBJECTS) $(DEFAULT_OBJECTS) $(USER_CPU_OBJECTS)
 
 fragments/run_fibonacci : $(DEFAULT_OBJECTS) $(USER_CPU_OBJECTS)
     

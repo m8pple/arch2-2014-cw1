@@ -13,8 +13,10 @@ public:
 	mips_mem(uint32_t, uint32_t);
 	~mips_mem();
 	
-	void read(uint8_t*, uint32_t, uint32_t) const;
-	void write(uint32_t, uint32_t, const uint8_t*);
+	void readBytes(uint8_t*, uint32_t, uint32_t) const;
+	void writeBytes(uint32_t, uint32_t, const uint8_t*);
+	uint32_t read(uint32_t);
+	void write(uint32_t, uint32_t);
 	
 private:
 	uint32_t	_size;
