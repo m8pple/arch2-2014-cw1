@@ -6,6 +6,9 @@
 //  Copyright (c) 2014 OJFord. All rights reserved.
 //
 
+#define MASK_BYTE 0x000000FF
+#define MASK_HALF 0x0000FFFF
+
 #include "include/mips_cpu.h"
 #include "mips_mem.h"
 #include <iostream>
@@ -111,7 +114,6 @@ void mips_alu::setOperation(mips_asm mnem){
 			break;
 		case J:
 		case JAL:
-		case LUI:
 		case MFHI:
 		case MFLO:
 		case OR:
@@ -124,6 +126,7 @@ void mips_alu::setOperation(mips_asm mnem){
 		case MULTU:
 			_operation = alu_multiplyu;
 			break;
+		case LUI:
 		case SLL:
 		case SLLV:
 			_operation = alu_shiftleft;
@@ -367,12 +370,14 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 				case BLEZ:
 				case BLTZ:
 				case BLTZAL:
-					*aluInB  = 0;
+					*aluInB  = r[0].value();
 					break;
 				case BEQ:
 				case BNE:
 					*aluInB  = r[ _irDecoded->regT() ].value();
 					break;
+				case LUI://pointless sign extending on 32bit system
+					*aluInA = 16;
 				case ADDIU:
 				case SLTIU:
 				case ANDI:
@@ -381,7 +386,7 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 					isSigned = false;
 				default:
 					*aluInB	 = isSigned
-								? signExtendImdt(_irDecoded->immediate())
+								? signExtend( (uint16_t)_irDecoded->immediate() )
 								: _irDecoded->immediate();
 			}
 			break;
@@ -561,7 +566,7 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 		case RType:
 			switch(_irDecoded->mnemonic()){
 
-				case SLTU:// if rs<rt, alu does rs-rt, hence:
+				case SLTU:// if rs<rt, but alu does rs-rt, hence:
 					r[ _irDecoded->regD() ].value((unsigned)*aluOut ? 0 : 1);
 					break;
 				case SLT:
@@ -644,14 +649,25 @@ void mips_cpu::link(void){
 	r[31].value(_npc.value()+4);
 }
 
-uint32_t mips_cpu::signExtendImdt(uint16_t imm){
-	std::cout << "Sign extending immediate: 0x" << imm << std::endl;
-	if( (imm&(MASK_IMDT>>1)) != imm ){
-		std::cout << "-------------Padding 1's: 0x" << (imm|~MASK_IMDT) << std::endl;
-		return imm|~MASK_IMDT;
+uint32_t mips_cpu::signExtend(uint8_t byte){
+	std::cout << "Sign extending byte: 0x" << byte << std::endl;
+	if( (byte&(MASK_BYTE>>1)) != byte ){
+		std::cout << "--------Padding 1's: 0x" << (byte|~MASK_BYTE) << std::endl;
+		return byte|~MASK_BYTE;
 	} else {
-		std::cout << "-------------Padding 0's: 0x" << imm << std::endl;
-		return imm;
+		std::cout << "--------Padding 0's: 0x" << byte << std::endl;
+		return byte;
+	};
+}
+
+uint32_t mips_cpu::signExtend(uint16_t half){
+	std::cout << "Sign extending halfword: 0x" << half << std::endl;
+	if( (half&(MASK_HALF>>1)) != half ){
+		std::cout << "------------Padding 1's: 0x" << (half|~MASK_HALF) << std::endl;
+		return half|~MASK_HALF;
+	} else {
+		std::cout << "------------Padding 0's: 0x" << half << std::endl;
+		return half;
 	};
 }
 //

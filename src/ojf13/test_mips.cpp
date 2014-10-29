@@ -14,14 +14,14 @@
 #include <iostream>
 
 int main(){
-    mips_mem_h mem = mips_mem_create_ram(1<<31, 4);
+    mips_mem_h mem = mips_mem_create_ram(0xFFFFFFFF, 4);
     mips_cpu_h cpu = mips_cpu_create(mem);
 	srand((unsigned)time(NULL));
 	
     mips_test_begin_suite();
 
 	for(unsigned i=0; i<NUM_OP_TESTS; ++i)
-		runTest(opTests[i], cpu, mem, 256);
+		runTest(opTests[i], cpu, mem, 128);
 	
 	runTest(constInputs, cpu, mem, 1);		//
 	runTest(registerReset, cpu, mem, 1);	// It's hard to imagine that the correctness
@@ -68,8 +68,9 @@ testResult registerReset(mips_cpu_h cpu, mips_mem_h){
             mips_cpu_get_register(cpu, i-1, &got);
             correct |= (got==0);
         }
-    } catch(mips_error) {
+    } catch(mips_error e) {
         correct = 0;
+		std::cout << "Error " << e << " accessing registers." << std::endl;
     }
 	
 	if(!correct)
@@ -96,8 +97,9 @@ testResult memoryIO(mips_cpu_h, mips_mem_h mem){
 		for(unsigned i=0; i<4; ++i)
 			correct &= obuf[i]==ibuf[i] ? 1 : 0;
 	
-	} catch(mips_error) {
+	} catch(mips_error e) {
 		correct = 0;
+		std::cout << "Error " << e << "reading from/writing to memory." << std::endl;
 	}
 	return {"<INTERNAL>", "Check can read same value back after write.", correct};
 }
@@ -226,7 +228,7 @@ testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 	uint16_t imm;
 	
 	try{
-		r1 = rand();
+		r1 = mnemonic==LUI ? 0 : rand();
 		imm= rand();
 		
 		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, imm).bufferedVal());
@@ -237,9 +239,14 @@ testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 		mips_cpu_step(cpu);
 		
 		mips_cpu_get_register(cpu, 2, &r2);
-		correct = r2 == verfunc(r1, imm);
+		exp = verfunc(r1, imm);
+		correct = r2 == exp;
 		
-		
+		if(correct == 0){
+			std::cout << "Incorrect result." << std::endl;
+			std::cout << "Result was: 0x" << r2 << std::endl;
+			std::cout << "--Expected: 0x" << exp << std::endl;
+		}
 	
 	} catch(mips_error e) {
 		try{
@@ -288,10 +295,11 @@ testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 testResult JTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncJ verfunc){
 	int correct = -1;
 	uint32_t pcInit;
-	mips_cpu_reset(cpu);
 	
 	try{
 		uint32_t index = rand()&0x03FFFFFC;	//26 bits, aligned
+		mips_cpu_reset(cpu);
+
 		try{
 			pcInit= rand()&0x0000FFFC;		//seems reasonable
 			if(mnemonic == JR){
@@ -488,6 +496,63 @@ testResult hiloResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyF
 	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
 }
 
+testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncLS verfunc){
+	int correct = -1;
+	
+	try{
+		int16_t offset = rand()<<2;	//align
+		uint32_t addr = 0x100;
+		uint8_t idata[4] = {
+			(uint8_t)rand(),
+			(uint8_t)rand(),
+			(uint8_t)rand(),
+			(uint8_t)rand()
+		};
+		uint32_t odata;
+		
+		mips_cpu_reset(cpu);
+
+		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, offset).bufferedVal());
+		mips_cpu_set_register(cpu, 1, addr);
+		
+		if(mnemonic == LB || mnemonic == LBU ||
+		   mnemonic == LW || mnemonic == LWL || mnemonic == LWR){
+			//Write a word, even if only testing a byte/half
+			mips_mem_write(mem, addr+offset, 4, idata);
+			mips_cpu_step(cpu);
+			mips_cpu_get_register(cpu, 2, &odata);
+			
+		}
+		else{
+			mips_cpu_set_register(cpu, 2, (idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3]));
+			mips_cpu_step(cpu);
+			uint8_t t[4];
+			mips_mem_read(mem, addr+offset, 4, t);
+			odata = t[0]<<24|t[1]<<16|t[2]<<8|t[3];
+		}
+		
+		uint32_t exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3]);
+		
+		correct = (odata == exp);
+		
+		if(correct == 0){
+			std::cout << "Incorrect result." << std::endl;
+			std::cout << "Load/Stored: 0x" << odata << std::endl;
+			std::cout << "---Expected: 0x" << exp << std::endl;
+		}
+
+	} catch(mips_error e){
+		correct = 0;
+		std::cout << "Error " << e << "performing load/store: " << std::endl;
+	}
+
+	std::string desc = "Check result of ";
+	desc += mipsInstruction[mnemonic].mnem;
+	desc += "-ing.";
+	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
+}
+
+
 uint32_t ADDverify(uint32_t r1, uint32_t r2, uint8_t){
 	int64_t p = (signed)r1+(signed)r2;
 	if((~(unsigned)p)&0xFFFFFFFF00000000)
@@ -639,6 +704,28 @@ uint32_t JRverify(uint32_t, uint32_t r1){
 }
 testResult JRResult(mips_cpu_h cpu, mips_mem_h mem){
 	return JTypeResult(cpu, mem, JR, JRverify);
+}
+
+uint32_t LBverify(uint32_t data){
+	uint32_t ret = (data>>24)&0x000000FF;
+	return ret&0x00000080 ? ret|0xFFFFFF00 : ret;
+}
+testResult LBResult(mips_cpu_h cpu, mips_mem_h mem){
+	return loadstoreResult(cpu, mem, LB, LBverify);
+}
+
+uint32_t LBUverify(uint32_t data){
+	return (data>>24)&0x000000FF;
+}
+testResult LBUResult(mips_cpu_h cpu, mips_mem_h mem){
+	return loadstoreResult(cpu, mem, LBU, LBUverify);
+}
+
+uint32_t LUIverify(uint32_t, uint16_t imm){
+	return imm<<16;
+}
+testResult LUIResult(mips_cpu_h cpu, mips_mem_h mem){
+	return ITypeResult(cpu, mem, LUI, (verifyFuncI)LUIverify);
 }
 
 hilo MULTverify(uint32_t r1, uint32_t r2){

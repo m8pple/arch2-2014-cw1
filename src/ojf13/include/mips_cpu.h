@@ -135,7 +135,8 @@ protected:
 	void writeWord(uint32_t, uint32_t);
 	
 	void link(void);
-	uint32_t signExtendImdt(uint16_t);
+	uint32_t signExtend(uint8_t);
+	uint32_t signExtend(uint16_t);
 	
 	mips_alu		_alu;
 	
