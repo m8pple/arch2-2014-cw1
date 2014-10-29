@@ -492,6 +492,7 @@ testResult hiloResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyF
 testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncLS verfunc){
 	int correct = -1;
 	
+	uint32_t rtInit = 0x00010203;
 	uint8_t idata[4] = {
 		(uint8_t)rand(),
 		(uint8_t)rand(),
@@ -523,6 +524,8 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 		
 		if(mnemonic == LB || mnemonic == LBU ||
 		   mnemonic == LW || mnemonic == LWL || mnemonic == LWR){
+			//Initial value to test LWL/LWR leave half, and others clear
+			mips_cpu_set_register(cpu, 2, rtInit);
 			
 			//Write a word, even if only testing a byte/half
 			mips_mem_write(mem, addr+offset-align, 4, idata);
@@ -542,11 +545,11 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 			odata = t[0]<<24|t[1]<<16|t[2]<<8|t[3];
 		}
 		
-		exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align);
+		exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align, rtInit);
 
 	} catch(mips_error e) {
 		try{
-			exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align);
+			exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align, rtInit);
 			correct = 0;		//Simulator threw exception, shouldn't have.
 			std::cout << "Incorrect result." << std::endl;
 			std::cout << "Result was: Exception " << e << std::endl;
@@ -564,7 +567,7 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 	}
 	if(correct == -1){
 		try{
-			exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align);
+			exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align, rtInit);
 			if( odata == exp )
 				correct = 1;	//No exception, correct result
 			else{
@@ -743,7 +746,7 @@ testResult JRResult(mips_cpu_h cpu, mips_mem_h mem){
 	return JTypeResult(cpu, mem, JR, JRverify);
 }
 
-uint32_t LBverify(uint32_t data, uint8_t align){
+uint32_t LBverify(uint32_t data, uint8_t align, uint32_t){
 	uint32_t ret = (data>>(24-align*8))&0x000000FF;
 	return ret&0x00000080 ? ret|0xFFFFFF00 : ret;
 }
@@ -751,7 +754,7 @@ testResult LBResult(mips_cpu_h cpu, mips_mem_h mem){
 	return loadstoreResult(cpu, mem, LB, LBverify);
 }
 
-uint32_t LBUverify(uint32_t data, uint8_t align){
+uint32_t LBUverify(uint32_t data, uint8_t align, uint32_t){
 	return (data>>(24-align*8))&0x000000FF;
 }
 testResult LBUResult(mips_cpu_h cpu, mips_mem_h mem){
@@ -765,22 +768,22 @@ testResult LUIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, LUI, (verifyFuncI)LUIverify);
 }
 
-uint32_t LWverify(uint32_t data, uint8_t){
+uint32_t LWverify(uint32_t data, uint8_t, uint32_t){
 	return data;
 }
 testResult LWResult(mips_cpu_h cpu, mips_mem_h mem){
 	return loadstoreResult(cpu, mem, LW, LWverify);
 }
 
-uint32_t LWLverify(uint32_t data, uint8_t align){
-	return data<<(align*8) & (MASK_16b<<16);
+uint32_t LWLverify(uint32_t data, uint8_t align, uint32_t rt){
+	return (data<<(align*8) & (MASK_16b<<16)) | (rt & MASK_16b);
 }
 testResult LWLResult(mips_cpu_h cpu, mips_mem_h mem){
 	return loadstoreResult(cpu, mem, LWL, LWLverify);
 }
 
-uint32_t LWRverify(uint32_t data, uint8_t align){
-	return data>>(24-align*8) & MASK_16b;
+uint32_t LWRverify(uint32_t data, uint8_t align, uint32_t rt){
+	return (data>>(24-align*8) & MASK_16b) | (rt & MASK_16b<<16);
 }
 testResult LWRResult(mips_cpu_h cpu, mips_mem_h mem){
 	return loadstoreResult(cpu, mem, LWR, LWRverify);

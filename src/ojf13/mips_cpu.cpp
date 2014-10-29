@@ -547,10 +547,12 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 			_lmd.value( readWord(*aluOut) );
 			return true;
 		case LWL:
-			_lmd.value( readHalf(*aluOut)<<16 );
+			_lmd.value( (r[_irDecoded->regT()].value() & MASK_HALF)
+					   | readHalf(*aluOut)<<16);
 			return true;
 		case LWR:
-			_lmd.value( readHalf(*aluOut - 1) );
+			_lmd.value( (r[_irDecoded->regT()].value() & (MASK_HALF<<16))
+					   | readHalf(*aluOut - 1));
 			return true;
 			
 			//store
