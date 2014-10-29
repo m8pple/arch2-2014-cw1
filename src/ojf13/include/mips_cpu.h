@@ -10,12 +10,13 @@
 #define MIPS_NUM_REG	32U
 #endif
 
+#include "mips_mem.h"
+typedef mips_mem_h *mips_mem;
+
 #if DEBUG==1	//Xcode doesn't want me to put ojf13/ on the path..
 #include "mips_instr.h"
-#include "mips_cpu_mem.h"
 #else
 #include "include/mips_instr.h"
-#include "include/mips_cpu_mem.h"
 #endif
 
 typedef enum _mips_cpu_stage{
@@ -127,6 +128,11 @@ protected:
 	void fetchRegs(uint32_t*, uint32_t*);
 	bool accessMem(const uint32_t*);
 	void writeBack(const uint32_t*);
+	
+	uint8_t readByte(uint32_t);
+	void writeByte(uint32_t, uint8_t);
+	uint32_t readWord(uint32_t);
+	void writeWord(uint32_t, uint32_t);
 	
 	void link(void);
 	uint32_t signExtendImdt(uint16_t);

@@ -7,6 +7,7 @@
 //
 
 #include "include/mips_cpu.h"
+#include "mips_mem.h"
 #include <iostream>
 
 /*
@@ -292,7 +293,7 @@ uint32_t mips_cpu::pc(void) const{
 void mips_cpu::fetchInstr(){
 	std::cout << "Fetching instruction..." << std::endl;
 	uint8_t	buf[4];
-	uint32_t word = _mem_ptr->read(pc());
+	uint32_t word = readWord(pc());
 	_ir.internal_set(word);
 	//_ir.internal_set(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
 	std::cout << "Fetched 0x" << std::hex << (int)buf[0] << (int)buf[1] << (int)buf[2] << (int)buf[3] << std::endl;
@@ -320,8 +321,9 @@ void mips_cpu::decode(){
 			return;
 		}
 	}
+	
+	/* BUG: Sometimes ADD r1,r2,r3 (0xFF7F00) comes here. Mostly it doesn't. Wtf. */
 	//no match
-
 	throw mips_ExceptionInvalidInstruction;
 }
 
@@ -529,30 +531,23 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 			
 			//load
 		case LB:
+			_lmd.value( signExtend(readByte(*aluOut)) );
+			return true;
 		case LBU:
+			_lmd.value( readByte(*aluOut) );
+			return true;
 		case LW:
 		case LWL:
 		case LWR:
-			{
-				//uint8_t	buf[4];
-				_lmd.value( _mem_ptr->read(*aluOut) );
-				//_mem_ptr->readBytes(buf, *aluOut, 4);
-				//_lmd.value(buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3]);
-				return true;
-			}
+			_lmd.value( readWord(*aluOut) );
+			return true;
 			
 			//store
 		case SB:
 		case SH:
 		case SW:
-			{
-				//uint8_t buf[4];
-				//for(int i=0; i<4; ++i)
-				//	buf[i] = (uint8_t)( ((_irDecoded->regT())>>(3-i)*8)&MASK_08b );
-				//_mem_ptr->writeBytes(*aluOut, 4, buf);
-				_mem_ptr->write(*aluOut, _irDecoded->regT());
-				return true;
-			}
+			writeWord(*aluOut, _irDecoded->regT());
+			return true;
 			
 		default:
 			return true;
@@ -588,15 +583,14 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 
 		case IType:
 			switch(_irDecoded->mnemonic()){
-				case LB:
 				case LBU:
+				case LB:
 				case LW:
 				case LWL:
 				case LWR:
-					r[ _irDecoded->regT() ].value(_lmd.value());
+					r[ _irDecoded->regT() ].value( _lmd.value() );
 					break;
-					
-					
+
 				case SLTIU:
 					r[ _irDecoded->regT() ].value((unsigned)*aluOut ? 0 : 1);
 					break;
@@ -612,6 +606,37 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 		case JType:
 			throw mips_InternalError;
 	}
+}
+
+uint8_t mips_cpu::readByte(uint32_t addr){
+	uint8_t ret[4];
+	mips_mem_read((mips_mem_h)_mem_ptr, addr, 4, ret);
+	return ret[0];
+}
+
+void mips_cpu::writeByte(uint32_t addr, uint8_t data){
+	uint8_t buf[4];
+	mips_mem_read((mips_mem_h)_mem_ptr, addr, 4, buf);
+	buf[0] = data;
+	mips_mem_write((mips_mem_h)_mem_ptr, addr, 4, buf);
+}
+
+uint32_t mips_cpu::readWord(uint32_t addr){
+	uint8_t buf[4];
+	mips_mem_read((mips_mem_h)_mem_ptr, addr, 4, buf);
+
+	uint32_t word = 0x0;
+	for(unsigned i=0; i<4; ++i)
+		word |= buf[3-i]<<(i*8);
+	
+	return word;
+}
+
+void mips_cpu::writeWord(uint32_t addr, uint32_t data){
+	uint8_t buf[4];
+	for(unsigned i=0; i<4; ++i)
+		buf[i] = (data >> (i*8))&0x000000FF;
+	mips_mem_write((mips_mem_h)_mem_ptr, addr, 4, buf);
 }
 
 void mips_cpu::link(void){
