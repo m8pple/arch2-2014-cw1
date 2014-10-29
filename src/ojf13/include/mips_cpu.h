@@ -131,6 +131,8 @@ protected:
 	
 	uint8_t readByte(uint32_t);
 	void writeByte(uint32_t, uint8_t);
+	uint16_t readHalf(uint32_t);
+	void writeHalf(uint32_t, uint16_t);
 	uint32_t readWord(uint32_t);
 	void writeWord(uint32_t, uint32_t);
 	

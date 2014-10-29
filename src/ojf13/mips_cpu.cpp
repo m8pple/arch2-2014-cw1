@@ -372,11 +372,13 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 				case BLTZAL:
 					*aluInB  = r[0].value();
 					break;
+				
 				case BEQ:
 				case BNE:
 					*aluInB  = r[ _irDecoded->regT() ].value();
 					break;
-				case LUI://pointless sign extending on 32bit system
+				
+				case LUI:	//pointless sign extending on 32bit system
 					*aluInA = 16;
 				case ADDIU:
 				case SLTIU:
@@ -542,9 +544,13 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 			_lmd.value( readByte(*aluOut) );
 			return true;
 		case LW:
-		case LWL:
-		case LWR:
 			_lmd.value( readWord(*aluOut) );
+			return true;
+		case LWL:
+			_lmd.value( readHalf(*aluOut)<<16 );
+			return true;
+		case LWR:
+			_lmd.value( readHalf(*aluOut - 1) );
 			return true;
 			
 			//store
@@ -614,22 +620,55 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 }
 
 uint8_t mips_cpu::readByte(uint32_t addr){
+	uint8_t align = addr%4;
 	uint8_t ret[4];
-	mips_mem_read((mips_mem_h)_mem_ptr, addr, 4, ret);
-	return ret[0];
+	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr-align, 4, ret);
+	if(e == mips_Success)
+		return ret[align];
+	else
+		throw e;
 }
 
 void mips_cpu::writeByte(uint32_t addr, uint8_t data){
+	uint8_t align = addr%4;
 	uint8_t buf[4];
-	mips_mem_read((mips_mem_h)_mem_ptr, addr, 4, buf);
-	buf[0] = data;
-	mips_mem_write((mips_mem_h)_mem_ptr, addr, 4, buf);
+	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr-align, 4, buf);
+	if(e != mips_Success)
+		throw e;
+	buf[align] = data;
+	mips_mem_write((mips_mem_h)_mem_ptr, addr-align, 4, buf);
+	if(e != mips_Success)
+		throw e;
+}
+
+uint16_t mips_cpu::readHalf(uint32_t addr){
+	uint8_t align = addr%4;
+	uint8_t ret[align<3 ? 4 : 8];
+	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr-align, align<3 ? 4 : 8, ret);
+	if(e == mips_Success)
+		return (ret[align]<<8)|ret[align+1];
+	else
+		throw e;
+}
+	
+void mips_cpu::writeHalf(uint32_t addr, uint16_t data){
+	uint8_t align = addr%4;
+	uint8_t buf[align<3 ? 4 : 8];
+	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr-align, align<3 ? 4 : 8, buf);
+	if(e != mips_Success)
+		throw e;
+	*(buf+align*8) = data;
+	mips_mem_write((mips_mem_h)_mem_ptr, addr-align, 4, buf);
+	if(e != mips_Success)
+		throw e;
 }
 
 uint32_t mips_cpu::readWord(uint32_t addr){
 	uint8_t buf[4];
-	mips_mem_read((mips_mem_h)_mem_ptr, addr, 4, buf);
-
+	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr, 4, buf);
+	if(e != mips_Success)
+		throw e;
+	
 	uint32_t word = 0x0;
 	for(unsigned i=0; i<4; ++i)
 		word |= buf[3-i]<<(i*8);
@@ -641,7 +680,9 @@ void mips_cpu::writeWord(uint32_t addr, uint32_t data){
 	uint8_t buf[4];
 	for(unsigned i=0; i<4; ++i)
 		buf[i] = (data >> (i*8))&0x000000FF;
-	mips_mem_write((mips_mem_h)_mem_ptr, addr, 4, buf);
+	mips_error e = mips_mem_write((mips_mem_h)_mem_ptr, addr, 4, buf);
+	if(e != mips_Success)
+		throw e;
 }
 
 void mips_cpu::link(void){
