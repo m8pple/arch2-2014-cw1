@@ -10,7 +10,7 @@
 #define MIPS_NUM_REG	32U
 #endif
 
-#define NUM_OP_TESTS	39U
+#define NUM_OP_TESTS	42U
 
 #if DEBUG==1
 #include "mips_instr.h"
@@ -36,7 +36,7 @@ typedef uint32_t (*verifyFuncI)(uint32_t, uint16_t);
 typedef uint32_t (*verifyFuncB)(uint32_t, uint32_t, uint32_t);
 typedef uint32_t (*verifyFuncJ)(uint32_t, uint32_t);
 typedef hilo (*verifyFuncHL)(uint32_t, uint32_t);
-typedef uint32_t (*verifyFuncLS)(uint32_t);
+typedef uint32_t (*verifyFuncLS)(uint32_t, uint8_t);
 testResult RTypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncR);
 testResult ITypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncI);
 testResult branchResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncB);
@@ -71,6 +71,9 @@ testResult JRResult(mips_cpu_h, mips_mem_h);
 testResult LBResult(mips_cpu_h, mips_mem_h);
 testResult LBUResult(mips_cpu_h, mips_mem_h);
 testResult LUIResult(mips_cpu_h, mips_mem_h);
+testResult LWResult(mips_cpu_h, mips_mem_h);
+testResult LWLResult(mips_cpu_h, mips_mem_h);
+testResult LWRResult(mips_cpu_h, mips_mem_h);
 
 testResult MULTResult(mips_cpu_h, mips_mem_h);
 testResult MULTUResult(mips_cpu_h, mips_mem_h);
@@ -115,6 +118,9 @@ testResult (*opTests[NUM_OP_TESTS])(mips_cpu_h, mips_mem_h) = {
 	LBResult,
 	LBUResult,
 	LUIResult,
+	LWResult,
+	LWLResult,
+	LWRResult,
 	
 	MULTResult,
 	MULTUResult,

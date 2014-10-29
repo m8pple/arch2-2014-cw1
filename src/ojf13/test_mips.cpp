@@ -17,6 +17,7 @@ int main(){
     mips_mem_h mem = mips_mem_create_ram(0xFFFFFFFF, 4);
     mips_cpu_h cpu = mips_cpu_create(mem);
 	srand((unsigned)time(NULL));
+	std::cout << std::hex;
 	
     mips_test_begin_suite();
 
@@ -239,14 +240,6 @@ testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 		mips_cpu_step(cpu);
 		
 		mips_cpu_get_register(cpu, 2, &r2);
-		exp = verfunc(r1, imm);
-		correct = r2 == exp;
-		
-		if(correct == 0){
-			std::cout << "Incorrect result." << std::endl;
-			std::cout << "Result was: 0x" << r2 << std::endl;
-			std::cout << "--Expected: 0x" << exp << std::endl;
-		}
 	
 	} catch(mips_error e) {
 		try{
@@ -499,16 +492,29 @@ testResult hiloResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyF
 testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncLS verfunc){
 	int correct = -1;
 	
+	uint8_t idata[4] = {
+		(uint8_t)rand(),
+		(uint8_t)rand(),
+		(uint8_t)rand(),
+		(uint8_t)rand()
+	};
+	uint8_t align = 0;
+	uint32_t odata;
+	
+	uint32_t exp;
+	
 	try{
-		int16_t offset = rand()<<2;	//align
-		uint32_t addr = 0x100;
-		uint8_t idata[4] = {
-			(uint8_t)rand(),
-			(uint8_t)rand(),
-			(uint8_t)rand(),
-			(uint8_t)rand()
-		};
-		uint32_t odata;
+		int16_t offset	= rand()<<2;	//align
+		uint32_t addr	= 0x100;		//avoid program memory
+		
+		if(mnemonic == LB || mnemonic == LBU || mnemonic == LWL || mnemonic == LWR || mnemonic == SB){
+			align+= rand()%4;
+			addr += align;				//mix up the alignment
+		}
+		else if (mnemonic == SH){
+			align+= (rand()%2)*2;
+			addr += align;
+		}
 		
 		mips_cpu_reset(cpu);
 
@@ -517,34 +523,65 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 		
 		if(mnemonic == LB || mnemonic == LBU ||
 		   mnemonic == LW || mnemonic == LWL || mnemonic == LWR){
+			
 			//Write a word, even if only testing a byte/half
-			mips_mem_write(mem, addr+offset, 4, idata);
+			mips_mem_write(mem, addr+offset-align, 4, idata);
+			//Zero around it
+			uint8_t zero[4] = {0};
+			mips_mem_write(mem, addr+offset-align-4, 4, zero);
+			mips_mem_write(mem, addr+offset-align+4, 4, zero);
+
 			mips_cpu_step(cpu);
 			mips_cpu_get_register(cpu, 2, &odata);
-			
 		}
 		else{
 			mips_cpu_set_register(cpu, 2, (idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3]));
 			mips_cpu_step(cpu);
 			uint8_t t[4];
-			mips_mem_read(mem, addr+offset, 4, t);
+			mips_mem_read(mem, addr+offset-align, 4, t);
 			odata = t[0]<<24|t[1]<<16|t[2]<<8|t[3];
 		}
 		
-		uint32_t exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3]);
-		
-		correct = (odata == exp);
-		
-		if(correct == 0){
-			std::cout << "Incorrect result." << std::endl;
-			std::cout << "Load/Stored: 0x" << odata << std::endl;
-			std::cout << "---Expected: 0x" << exp << std::endl;
-		}
+		exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align);
 
-	} catch(mips_error e){
-		correct = 0;
-		std::cout << "Error " << e << "performing load/store: " << std::endl;
+	} catch(mips_error e) {
+		try{
+			exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align);
+			correct = 0;		//Simulator threw exception, shouldn't have.
+			std::cout << "Incorrect result." << std::endl;
+			std::cout << "Result was: Exception " << e << std::endl;
+			std::cout << "--Expected: 0x" << exp << std::endl;
+		} catch(mips_error v){
+			if( v == e )
+				correct = 1;	//Correct exception
+			else{
+				correct = 0;	//Exception, but the wrong one!
+				std::cout << "Incorrect result." << std::endl;
+				std::cout << "Result was: Exception " << e << std::endl;
+				std::cout << "--Expected: Exception " << v << std::endl;
+			}
+		}
 	}
+	if(correct == -1){
+		try{
+			exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align);
+			if( odata == exp )
+				correct = 1;	//No exception, correct result
+			else{
+				correct = 0;	//Incorrect result.
+				std::cout << "Incorrect result." << std::endl;
+				std::cout << "Load/Stored: 0x" << odata << std::endl;
+				std::cout << "---Expected: 0x" << exp << std::endl;
+			}
+		} catch(mips_error v){
+			correct = 0;		//No exception, should have
+			std::cout << "Incorrect result." << std::endl;
+			std::cout << "Result was: 0x" << odata << std::endl;
+			std::cout << "--Expected: Exception " << v << std::endl;
+		}
+	}
+	else;
+
 
 	std::string desc = "Check result of ";
 	desc += mipsInstruction[mnemonic].mnem;
@@ -706,16 +743,16 @@ testResult JRResult(mips_cpu_h cpu, mips_mem_h mem){
 	return JTypeResult(cpu, mem, JR, JRverify);
 }
 
-uint32_t LBverify(uint32_t data){
-	uint32_t ret = (data>>24)&0x000000FF;
+uint32_t LBverify(uint32_t data, uint8_t align){
+	uint32_t ret = (data>>(24-align*8))&0x000000FF;
 	return ret&0x00000080 ? ret|0xFFFFFF00 : ret;
 }
 testResult LBResult(mips_cpu_h cpu, mips_mem_h mem){
 	return loadstoreResult(cpu, mem, LB, LBverify);
 }
 
-uint32_t LBUverify(uint32_t data){
-	return (data>>24)&0x000000FF;
+uint32_t LBUverify(uint32_t data, uint8_t align){
+	return (data>>(24-align*8))&0x000000FF;
 }
 testResult LBUResult(mips_cpu_h cpu, mips_mem_h mem){
 	return loadstoreResult(cpu, mem, LBU, LBUverify);
@@ -726,6 +763,27 @@ uint32_t LUIverify(uint32_t, uint16_t imm){
 }
 testResult LUIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, LUI, (verifyFuncI)LUIverify);
+}
+
+uint32_t LWverify(uint32_t data, uint8_t){
+	return data;
+}
+testResult LWResult(mips_cpu_h cpu, mips_mem_h mem){
+	return loadstoreResult(cpu, mem, LW, LWverify);
+}
+
+uint32_t LWLverify(uint32_t data, uint8_t align){
+	return data<<(align*8) & (MASK_16b<<16);
+}
+testResult LWLResult(mips_cpu_h cpu, mips_mem_h mem){
+	return loadstoreResult(cpu, mem, LWL, LWLverify);
+}
+
+uint32_t LWRverify(uint32_t data, uint8_t align){
+	return data>>(24-align*8) & MASK_16b;
+}
+testResult LWRResult(mips_cpu_h cpu, mips_mem_h mem){
+	return loadstoreResult(cpu, mem, LWR, LWRverify);
 }
 
 hilo MULTverify(uint32_t r1, uint32_t r2){
