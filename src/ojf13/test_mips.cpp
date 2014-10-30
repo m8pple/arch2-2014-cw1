@@ -499,6 +499,7 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 		(uint8_t)rand(),
 		(uint8_t)rand()
 	};
+	uint8_t zero[4] = {0};
 	uint8_t align = 0;
 	uint32_t odata;
 	
@@ -508,14 +509,21 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 		int16_t offset	= rand()<<2;	//align
 		uint32_t addr	= 0x100;		//avoid program memory
 		
-		if(mnemonic == LB || mnemonic == LBU || mnemonic == LWL || mnemonic == LWR || mnemonic == SB){
+		if( mnemonic == LB || mnemonic == LBU || mnemonic == LWL || mnemonic == LWR
+		   /*|| mnemonic == SH*/ || mnemonic == SB){
+			//UNCOMMENT WHEN EXCEPTIONS WORK
+			
 			align+= rand()%4;
 			addr += align;				//mix up the alignment
 		}
-		else if (mnemonic == SH){
-			align+= (rand()%2)*2;
+		
+		/* UNCOMMENT WHEN EXCEPTIONS WORK!
+		else if(mnemonic == LW || mnemonic == SW){
+			
+			align+= rand()%2 ? 1 : 0;	//50% chance of being misaligned (test exception)
 			addr += align;
 		}
+		*/
 		
 		mips_cpu_reset(cpu);
 
@@ -530,7 +538,6 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 			//Write a word, even if only testing a byte/half
 			mips_mem_write(mem, addr+offset-align, 4, idata);
 			//Zero around it
-			uint8_t zero[4] = {0};
 			mips_mem_write(mem, addr+offset-align-4, 4, zero);
 			mips_mem_write(mem, addr+offset-align+4, 4, zero);
 
@@ -538,14 +545,16 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 			mips_cpu_get_register(cpu, 2, &odata);
 		}
 		else{
+			//Zero the address we want to test writing to
+			mips_mem_write(mem, addr+offset-align, 4, zero);
 			mips_cpu_set_register(cpu, 2, (idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3]));
+			
 			mips_cpu_step(cpu);
+			
 			uint8_t t[4];
 			mips_mem_read(mem, addr+offset-align, 4, t);
 			odata = t[0]<<24|t[1]<<16|t[2]<<8|t[3];
 		}
-		
-		exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align, rtInit);
 
 	} catch(mips_error e) {
 		try{
@@ -825,6 +834,23 @@ testResult ORIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, ORI, (verifyFuncI)ORIverify);
 }
 
+uint32_t SBverify(uint32_t data, uint8_t align, uint32_t){
+	return (data&MASK_08b)<<(3-align)*8;
+}
+testResult SBResult(mips_cpu_h cpu, mips_mem_h mem){
+	return loadstoreResult(cpu, mem, SB, SBverify);
+}
+
+uint32_t SHverify(uint32_t data, uint8_t align, uint32_t){
+	if(align%2)
+		throw mips_ExceptionInvalidAlignment;
+	else
+		return align ? data&MASK_16b : (data&MASK_16b)<<16;
+}
+testResult SHResult(mips_cpu_h cpu, mips_mem_h mem){
+	return loadstoreResult(cpu, mem, SH, SHverify);
+}
+
 uint32_t SUBverify(uint32_t r1, uint32_t r2, uint8_t){
 	int64_t p = (signed)r1-(signed)r2;
 	if((~(unsigned)p)&0xFFFFFFFF00000000)
@@ -904,6 +930,16 @@ uint32_t SRLVverify(uint32_t r1, uint32_t r2, uint8_t){
 }
 testResult SRLVResult(mips_cpu_h cpu, mips_mem_h mem){
 	return RTypeResult(cpu, mem, SRLV, (verifyFuncR)SRLVverify);
+}
+
+uint32_t SWverify(uint32_t data, uint8_t align, uint32_t){
+	if(align)
+		throw mips_ExceptionInvalidAlignment;
+	else
+		return data;
+}
+testResult SWResult(mips_cpu_h cpu, mips_mem_h mem){
+	return loadstoreResult(cpu, mem, SW, SWverify);
 }
 
 uint32_t XORverify(uint32_t r1, uint32_t r2, uint8_t){

@@ -10,7 +10,7 @@
 #define MIPS_NUM_REG	32U
 #endif
 
-#define NUM_OP_TESTS	42U
+#define NUM_OP_TESTS	45U
 
 #if DEBUG==1
 #include "mips_instr.h"
@@ -74,12 +74,12 @@ testResult LUIResult(mips_cpu_h, mips_mem_h);
 testResult LWResult(mips_cpu_h, mips_mem_h);
 testResult LWLResult(mips_cpu_h, mips_mem_h);
 testResult LWRResult(mips_cpu_h, mips_mem_h);
-
 testResult MULTResult(mips_cpu_h, mips_mem_h);
 testResult MULTUResult(mips_cpu_h, mips_mem_h);
 testResult ORResult(mips_cpu_h, mips_mem_h);
 testResult ORIResult(mips_cpu_h, mips_mem_h);
-
+testResult SBResult(mips_cpu_h, mips_mem_h);
+testResult SHResult(mips_cpu_h, mips_mem_h);
 testResult SLLResult(mips_cpu_h, mips_mem_h);
 testResult SLLVResult(mips_cpu_h, mips_mem_h);
 testResult SLTResult(mips_cpu_h, mips_mem_h);
@@ -91,7 +91,7 @@ testResult SRLResult(mips_cpu_h, mips_mem_h);
 testResult SRLVResult(mips_cpu_h, mips_mem_h);
 testResult SUBResult(mips_cpu_h, mips_mem_h);
 testResult SUBUResult(mips_cpu_h, mips_mem_h);
-
+testResult SWResult(mips_cpu_h, mips_mem_h);
 testResult XORResult(mips_cpu_h, mips_mem_h);
 testResult XORIResult(mips_cpu_h, mips_mem_h);
 
@@ -121,12 +121,12 @@ testResult (*opTests[NUM_OP_TESTS])(mips_cpu_h, mips_mem_h) = {
 	LWResult,
 	LWLResult,
 	LWRResult,
-	
 	MULTResult,
 	MULTUResult,
 	ORResult,
 	ORIResult,
-	
+	SBResult,
+	SHResult,
 	SLLResult,
 	SLLVResult,
 	SLTResult,
@@ -138,7 +138,7 @@ testResult (*opTests[NUM_OP_TESTS])(mips_cpu_h, mips_mem_h) = {
 	SRLVResult,
 	SUBResult,
 	SUBUResult,
-	
+	SWResult,
 	XORResult,
 	XORIResult
 };

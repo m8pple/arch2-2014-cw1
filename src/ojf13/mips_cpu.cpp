@@ -397,9 +397,6 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 			*aluInA = pc()&0xf0000000;
 			*aluInB = _irDecoded->target()<<2;
 			break;
-		
-		default:
-			throw mips_InternalError;
 	}
 	
 	std::cout << "Set ALU input A to: 0x" << std::hex << *aluInA << std::endl;
@@ -417,13 +414,12 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-				//branch has no WB stage
-				return false;
 			} else{
 				std::cout << "Condition not met. Branch will not be taken." << std::endl;
 				_pc.advance();
-				return false;
 			}
+			//branch has no WB stage
+			return false;
 			
 		case BGEZ:
 			if((signed)*aluOut>=0){
@@ -431,13 +427,12 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-				//branch has no WB stage
-				return false;
 			} else{
 				std::cout << "Condition not met. Branch will not be taken." << std::endl;
 				_pc.advance();
-				return false;
 			}
+			//branch has no WB stage
+			return false;
 			
 		case BGEZAL:
 			if((signed)*aluOut>=0){
@@ -446,13 +441,12 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-				//branch has no WB stage
-				return false;
 			} else{
 				std::cout << "Condition not met. Branch will not be taken." << std::endl;
 				_pc.advance();
-				return false;
 			}
+			//branch has no WB stage
+			return false;
 			
 		case BGTZ:
 			if((signed)*aluOut>0){
@@ -460,27 +454,24 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-				//branch has no WB stage
-				return false;
 			} else{
 				std::cout << "Condition not met. Branch will not be taken." << std::endl;
 				_pc.advance();
-				return false;
 			}
-			
+			//branch has no WB stage
+			return false;
 		case BLEZ:
 			if((signed)*aluOut<=0){
 				std::cout << "Condition met. Taking branch next cycle." << std::endl;
 				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-				//branch has no WB stage
-				return false;
 			} else{
 				std::cout << "Condition not met. Branch will not be taken." << std::endl;
 				_pc.advance();
-				return false;
 			}
+			//branch has no WB stage
+			return false;
 		
 		case BLTZ:
 			if((signed)*aluOut<0){
@@ -488,13 +479,12 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-				//branch has no WB stage
-				return false;
 			} else{
 				std::cout << "Condition not met. Branch will not be taken." << std::endl;
 				_pc.advance();
-				return false;
 			}
+			//branch has no WB stage
+			return false;
 			
 		case BLTZAL:
 			if((signed)*aluOut<0){
@@ -503,13 +493,12 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-				//branch has no WB stage
-				return false;
 			} else{
 				std::cout << "Condition not met. Branch will not be taken." << std::endl;
 				_pc.advance();
-				return false;
 			}
+			//branch has no WB stage
+			return false;
 			
 		case BNE:
 			if((signed)*aluOut!=0){
@@ -517,13 +506,12 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 				uint32_t tmp = _npc.value();
 				_pc.advance();
 				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-				//branch has no WB stage
-				return false;
 			} else{
 				std::cout << "Condition not met. Branch will not be taken." << std::endl;
 				_pc.advance();
-				return false;
 			}
+			//branch has no WB stage
+			return false;
 			
 		case JAL:
 			link();
@@ -539,32 +527,36 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 			//load
 		case LB:
 			_lmd.value( signExtend(readByte(*aluOut)) );
-			return true;
+			break;
 		case LBU:
 			_lmd.value( readByte(*aluOut) );
-			return true;
+			break;
 		case LW:
 			_lmd.value( readWord(*aluOut) );
-			return true;
+			break;
 		case LWL:
 			_lmd.value( (r[_irDecoded->regT()].value() & MASK_HALF)
-					   | readHalf(*aluOut)<<16);
-			return true;
+					   | readHalf(*aluOut, true)<<16);
+			break;
 		case LWR:
 			_lmd.value( (r[_irDecoded->regT()].value() & (MASK_HALF<<16))
-					   | readHalf(*aluOut - 1));
-			return true;
+					   | readHalf(*aluOut - 1, true));
+			break;
 			
 			//store
 		case SB:
+			writeByte(*aluOut, r[_irDecoded->regT()].value());
+			break;
 		case SH:
+			writeHalf(*aluOut, r[_irDecoded->regT()].value());
+			break;
 		case SW:
-			writeWord(*aluOut, _irDecoded->regT());
-			return true;
+			writeWord(*aluOut, r[_irDecoded->regT()].value());
+			break;
 			
-		default:
-			return true;
+		default:;
 	}
+	return true;
 }
 
 void mips_cpu::writeBack(const uint32_t* aluOut){
@@ -625,8 +617,11 @@ uint8_t mips_cpu::readByte(uint32_t addr){
 	uint8_t align = addr%4;
 	uint8_t ret[4];
 	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr-align, 4, ret);
-	if(e == mips_Success)
-		return ret[align];
+	if(e == mips_Success){
+		uint8_t byte = ret[align];
+		std::cout << "Read 0x" << byte << " from 0x" << addr << std::endl;
+		return byte;
+	}
 	else
 		throw e;
 }
@@ -641,28 +636,40 @@ void mips_cpu::writeByte(uint32_t addr, uint8_t data){
 	mips_mem_write((mips_mem_h)_mem_ptr, addr-align, 4, buf);
 	if(e != mips_Success)
 		throw e;
+	else
+		std::cout << "Wrote 0x" << std::hex << (uint16_t)data << " to 0x" << addr << std::endl;
 }
 
-uint16_t mips_cpu::readHalf(uint32_t addr){
+uint16_t mips_cpu::readHalf(uint32_t addr, bool allowUnaligned){
 	uint8_t align = addr%4;
+	if(!allowUnaligned && addr%2)
+		throw mips_ExceptionInvalidAlignment;
 	uint8_t ret[align<3 ? 4 : 8];
 	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr-align, align<3 ? 4 : 8, ret);
-	if(e == mips_Success)
-		return (ret[align]<<8)|ret[align+1];
+	if(e == mips_Success){
+		uint16_t half = (ret[align]<<8)|ret[align+1];
+		std::cout << "Read 0x" << half << " from 0x" << addr << std::endl;
+		return half;
+	}
 	else
 		throw e;
 }
 	
-void mips_cpu::writeHalf(uint32_t addr, uint16_t data){
+void mips_cpu::writeHalf(uint32_t addr, uint16_t data, bool allowUnaligned){
 	uint8_t align = addr%4;
+	if(!allowUnaligned && addr%2)
+		throw mips_ExceptionInvalidAlignment;
 	uint8_t buf[align<3 ? 4 : 8];
 	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr-align, align<3 ? 4 : 8, buf);
 	if(e != mips_Success)
 		throw e;
-	*(buf+align*8) = data;
-	mips_mem_write((mips_mem_h)_mem_ptr, addr-align, 4, buf);
+	buf[align] = data>>8;
+	buf[align+1] = data&MASK_08b;
+	mips_mem_write((mips_mem_h)_mem_ptr, addr-align, align<3 ? 4 : 8, buf);
 	if(e != mips_Success)
 		throw e;
+	else
+		std::cout << "Wrote 0x" << data << " to 0x" << addr << std::endl;
 }
 
 uint32_t mips_cpu::readWord(uint32_t addr){
@@ -671,20 +678,21 @@ uint32_t mips_cpu::readWord(uint32_t addr){
 	if(e != mips_Success)
 		throw e;
 	
-	uint32_t word = 0x0;
-	for(unsigned i=0; i<4; ++i)
-		word |= buf[3-i]<<(i*8);
+	uint32_t word = buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3];
 	
+	std::cout << "Read 0x" << word << " from 0x" << addr << std::endl;
 	return word;
 }
 
 void mips_cpu::writeWord(uint32_t addr, uint32_t data){
 	uint8_t buf[4];
 	for(unsigned i=0; i<4; ++i)
-		buf[i] = (data >> (i*8))&0x000000FF;
+		buf[3-i] = (data >> (i*8))&0x000000FF;
 	mips_error e = mips_mem_write((mips_mem_h)_mem_ptr, addr, 4, buf);
 	if(e != mips_Success)
 		throw e;
+	else
+		std::cout << "Wrote 0x" << data << " to 0x" << addr << std::endl;
 }
 
 void mips_cpu::link(void){
