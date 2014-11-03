@@ -38,7 +38,8 @@ uint32_t Instruction::regT(void) const{
 uint32_t Instruction::regD(void) const{
 	if( type() == RType )
 		return (_value&MASK_DREG)>>POS_DREG;
-	else throw mips_InternalError;
+	else
+		throw mips_InternalError;
 }
 uint32_t Instruction::shift(void) const{
 	switch( mnemonic() ){
@@ -53,15 +54,18 @@ uint32_t Instruction::shift(void) const{
 uint32_t Instruction::function(void) const{
 	if( type() == RType )
 		return (_value&MASK_FUNC)>>POS_FUNC;
-	else throw mips_InternalError;
+	else
+		throw mips_InternalError;
 }
 uint32_t Instruction::immediate(void) const{
 	if( type() == IType )
 		return (_value&MASK_IMDT)>>POS_IMDT;
-	else throw mips_InternalError;
+	else
+		throw mips_InternalError;
 }
 uint32_t Instruction::target(void) const{
 	if( type() == JType )
 		return (_value&MASK_TRGT)>>POS_TRGT;
-	else throw mips_InternalError;
+	else
+		throw mips_InternalError;
 }
