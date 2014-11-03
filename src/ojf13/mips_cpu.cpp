@@ -74,7 +74,7 @@ void mips_reg_pc::advance(void){
  * MIPS ALU
  */
 mips_alu::mips_alu(uint32_t* out, const uint32_t* a, const uint32_t* b, hilo* hilo, FILE** f, const debug_level* dl) :
-outp(out), in_a(a), in_b(b), _hilo(hilo), _debug_file(f), _debug(dl){};
+outp(out), in_a(a), in_b(b), _debug(dl), _debug_file(f), _hilo(hilo){};
 
 void mips_alu::setOperation(mips_asm mnem){
 	switch(mnem){
@@ -361,7 +361,7 @@ void mips_cpu::decode(){
 		if( mipsInstruction[i].opco == ir->opcode() ){
 			switch( mipsInstruction[i].type ){
 				case RType:
-					if( mipsInstruction[i].func == ir->function()
+					if( (const uint32_t)mipsInstruction[i].func == ir->function()
 					   //Strictly following spec, shift field should be '00000'b
 					   //	unless shift instr, in which case rs should be '00000'b.
 					   && ( ir->shift() == 0
@@ -387,7 +387,7 @@ void mips_cpu::decode(){
 
 				case IType:
 					if( (	mipsInstruction[i].func == FIELD_NOT_EXIST
-						 || mipsInstruction[i].func == ir->regT() )
+						 || (const uint32_t)mipsInstruction[i].func == ir->regT() )
 					   
 					   //Load upper immediate should have zero rs
 					   && (	(ir->mnemonic() != LUI)
