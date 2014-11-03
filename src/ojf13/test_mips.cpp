@@ -19,6 +19,7 @@ int main(){
 	srand((unsigned)time(NULL));
 	std::cout << std::hex;
 	
+	mips_cpu_set_debug_level(cpu, 3, stderr);
     mips_test_begin_suite();
 	
 	runTest(initialPC, cpu, mem, 1);		//

@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
         srcName=argv[1];
     }
     
-    mips_mem_h m=mips_mem_create_ram(0x200000, 4);
+    mips_mem_h m=mips_mem_create_ram(0x20000, 4);
     mips_cpu_h c=mips_cpu_create(m);
     
     FILE *src=fopen(srcName,"rb");
@@ -34,14 +34,16 @@ int main(int argc, char *argv[])
     
     // No error checking... oh my!
     
-    uint32_t n=3;  // Value we will calculate fibonacci of
+    uint32_t n=4;  // Value we will calculate fibonacci of
     
     uint32_t sentinelPC=0x10000000;
     
     mips_cpu_set_register(c, 31, sentinelPC);   // set return address to something invalid
     mips_cpu_set_register(c, 4, n);             // Set input argument
     mips_cpu_set_register(c, 29, 0x1000);       // Create a stack pointer
-    
+	
+	mips_cpu_set_debug_level(c, 5, stderr);
+	
 	uint32_t steps=0;
 	uint32_t pc;
 	mips_error e = mips_Success;

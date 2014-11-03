@@ -300,7 +300,7 @@ void mips_cpu::step(void){
 	_stage = ID;
 	
 	decode();
-	fetchRegs(&_alu_in_a, &_alu_in_b);
+	fetchRegs();
 	
 	_stage = EX;
 	//magic
@@ -313,12 +313,12 @@ void mips_cpu::step(void){
 	
 	_stage = MEM;
 	// bit less magic
-	bool wb = accessMem(&_alu_out);
+	bool wb = accessMem();
 	
 	if(wb){
 		_stage = WB;
 		// more magic
-		writeBack(&_alu_out);
+		writeBack();
 		_pc.advance();
 	}
 }
@@ -349,7 +349,9 @@ void mips_cpu::match(Instruction& ir, unsigned i){
 	return;
 }
 void mips_cpu::decode(){
-	fprintf(_debug_file, "Decoding...\n");
+	if( _debug > ERROR )
+		fprintf(_debug_file, "Decoding...\n");
+	
 	Instruction *ir = new Instruction(_ir.value());
 	
 	for(unsigned i=0; i<NUM_INSTR; ++i){
@@ -417,39 +419,41 @@ void mips_cpu::decode(){
 	throw mips_ExceptionInvalidInstruction;
 }
 
-void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
-	fprintf(_debug_file, "Fetching registers...\n");
+void mips_cpu::fetchRegs(void){
+	if( _debug > ERROR )
+		fprintf(_debug_file, "Fetching registers...\n");
+	
 	mips_instr_type type = _irDecoded->type();
 	bool isSigned = true;
 
 	//ALU inputs
 	switch(type){
 		case RType:
-			*aluInB = r[ _irDecoded->regT() ].value();
+			_alu_in_b = r[ _irDecoded->regT() ].value();
 			switch(_irDecoded->mnemonic()){
 				case SLL:
 				case SRL:
 				case SRA:
-					*aluInA = _irDecoded->shift();
+					_alu_in_a = _irDecoded->shift();
 					break;
 
 					//MFHI/LO OR respective with 0
 				case MFHI:
-					*aluInA = _hi.value();
+					_alu_in_a = _hi.value();
 					//*aluInB = 0;	//not necessary if strictly mandate zeroes instead ignore?
 					break;
 				case MFLO:
-					*aluInA = _lo.value();
+					_alu_in_a = _lo.value();
 					//*aluInB = 0;
 					break;
 
 				default:
-					*aluInA = r[ _irDecoded->regS() ].value();
+					_alu_in_a = r[ _irDecoded->regS() ].value();
 			}
 			break;
 
 		case IType:
-			*aluInA = r[ _irDecoded->regS() ].value();
+			_alu_in_a = r[ _irDecoded->regS() ].value();
 			switch(_irDecoded->mnemonic()){
 				case BGEZ:
 				case BGEZAL:
@@ -457,187 +461,128 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 				case BLEZ:
 				case BLTZ:
 				case BLTZAL:
-					*aluInB  = r[0].value();
+					_alu_in_b  = r[0].value();
 					break;
 
 				case BEQ:
 				case BNE:
-					*aluInB  = r[ _irDecoded->regT() ].value();
+					_alu_in_b  = r[ _irDecoded->regT() ].value();
 					break;
 
 				case LUI:	//pointless sign extending on 32bit system
-					*aluInA = 16;
+					_alu_in_a = 16;
 					//case SLTIU:
 				case ANDI:
 				case ORI:
 				case XORI:
 					isSigned = false;
 				default:
-					*aluInB	 = isSigned
+					_alu_in_b	 = isSigned
 					? signExtend( (uint16_t)_irDecoded->immediate() )
 					: _irDecoded->immediate();
 			}
 			break;
 
 		case JType:
-			*aluInA = pc()&0xf0000000;
-			*aluInB = _irDecoded->target()<<2;
+			_alu_in_a = pc()&0xf0000000;
+			_alu_in_b = _irDecoded->target()<<2;
 			break;
 	}
 	
-	fprintf(_debug_file, "Set ALU input A to: 0x%X.\n", *aluInA);
-	fprintf(_debug_file, "Set ALU input B to: 0x%X.\n", *aluInB);
+	if( _debug > ERROR ){
+		fprintf(_debug_file, "Set ALU input A to: 0x%X.\n", _alu_in_a);
+		fprintf(_debug_file, "Set ALU input B to: 0x%X.\n", _alu_in_b);
+	}
 }
 
-bool mips_cpu::accessMem(const uint32_t* aluOut){
-	fprintf(_debug_file, "Accessing memory...\n");
+bool mips_cpu::branch(bool cond, bool doLink){
+	if( cond ){
+		if( doLink )
+			link();
+		if( _debug > ERROR )
+			fprintf(_debug_file, "Condition met. Taking branch next cycle.\n");
+		uint32_t tmp = _npc.value();
+		_pc.advance();
+		_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
+	} else{
+		if( _debug > ERROR )
+			fprintf(_debug_file, "Condition not met. Branch will not be taken.\n");
+		_pc.advance();
+	}
+	//branch has no WB stage
+	return false;
+}
+
+bool mips_cpu::accessMem(void){
+	if( _debug > ERROR )
+		fprintf(_debug_file, "Accessing memory...\n");
 	
 	switch(_irDecoded->mnemonic()){
 			//branch
 		case BEQ:
-			if((signed)*aluOut==0){
-				fprintf(_debug_file, "Condition met. Taking branch next cycle.\n");
-				uint32_t tmp = _npc.value();
-				_pc.advance();
-				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-			} else{
-				fprintf(_debug_file, "Condition not met. Branch will not be taken.\n");
-				_pc.advance();
-			}
-			//branch has no WB stage
-			return false;
-			
+			return branch( _alu_out == 0 );
+
 		case BGEZ:
-			if((signed)*aluOut>=0){
-				fprintf(_debug_file, "Condition met. Taking branch next cycle.\n");
-				uint32_t tmp = _npc.value();
-				_pc.advance();
-				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-			} else{
-				fprintf(_debug_file, "Condition not met. Branch will not be taken.\n");
-				_pc.advance();
-			}
-			//branch has no WB stage
-			return false;
-			
+			return branch( (signed)_alu_out >= 0 );
+
 		case BGEZAL:
-			if((signed)*aluOut>=0){
-				link();
-				fprintf(_debug_file, "Condition met. Taking branch next cycle.\n");
-				uint32_t tmp = _npc.value();
-				_pc.advance();
-				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-			} else{
-				fprintf(_debug_file, "Condition not met. Branch will not be taken.\n");
-				_pc.advance();
-			}
-			//branch has no WB stage
-			return false;
-			
+			return branch( (signed)_alu_out >= 0, true);
+
 		case BGTZ:
-			if((signed)*aluOut>0){
-				fprintf(_debug_file, "Condition met. Taking branch next cycle.\n");
-				uint32_t tmp = _npc.value();
-				_pc.advance();
-				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-			} else{
-				fprintf(_debug_file, "Condition not met. Branch will not be taken.\n");
-				_pc.advance();
-			}
-			//branch has no WB stage
-			return false;
+			return branch( (signed)_alu_out > 0);
+
 		case BLEZ:
-			if((signed)*aluOut<=0){
-				fprintf(_debug_file, "Condition met. Taking branch next cycle.\n");
-				uint32_t tmp = _npc.value();
-				_pc.advance();
-				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-			} else{
-				fprintf(_debug_file, "Condition not met. Branch will not be taken.\n");
-				_pc.advance();
-			}
-			//branch has no WB stage
-			return false;
+			return branch( (signed)_alu_out <= 0);
 
 		case BLTZ:
-			if((signed)*aluOut<0){
-				fprintf(_debug_file, "Condition met. Taking branch next cycle.\n");
-				uint32_t tmp = _npc.value();
-				_pc.advance();
-				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-			} else{
-				fprintf(_debug_file, "Condition not met. Branch will not be taken.\n");
-				_pc.advance();
-			}
-			//branch has no WB stage
-			return false;
+			return branch( (signed)_alu_out < 0);
 			
 		case BLTZAL:
-			if((signed)*aluOut<0){
-				link();
-				fprintf(_debug_file, "Condition met. Taking branch next cycle.\n");
-				uint32_t tmp = _npc.value();
-				_pc.advance();
-				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-			} else{
-				fprintf(_debug_file, "Condition not met. Branch will not be taken.\n");
-				_pc.advance();
-			}
-			//branch has no WB stage
-			return false;
+			return branch( (signed)_alu_out < 0, true);
 			
 		case BNE:
-			if((signed)*aluOut!=0){
-				fprintf(_debug_file, "Condition met. Taking branch next cycle.\n");
-				uint32_t tmp = _npc.value();
-				_pc.advance();
-				_npc.internal_set(tmp+(_irDecoded->immediate()<<2));
-			} else{
-				fprintf(_debug_file, "Condition not met. Branch will not be taken.\n");
-				_pc.advance();
-			}
-			//branch has no WB stage
-			return false;
-			
+			return branch( (signed)_alu_out != 0);
+
 		case JAL:
 			link();
 		case J:
 		case JR:
-			fprintf(_debug_file, "Jumping to 0x%X next cycle.\n", *aluOut);
+			if( _debug > ERROR )
+				fprintf(_debug_file, "Jumping to 0x%X next cycle.\n", _alu_out);
 			_pc.advance();
-			_npc.internal_set(*aluOut);
+			_npc.internal_set(_alu_out);
 			//branch has no WB stage
 			return false;
 			
 			
 			//load
 		case LB:
-			_lmd.value( signExtend(readByte(*aluOut)) );
+			_lmd.value( signExtend(readByte(_alu_out)) );
 			break;
 		case LBU:
-			_lmd.value( readByte(*aluOut) );
+			_lmd.value( readByte(_alu_out) );
 			break;
 		case LW:
-			_lmd.value( readWord(*aluOut) );
+			_lmd.value( readWord(_alu_out) );
 			break;
 		case LWL:
 			_lmd.value( (r[_irDecoded->regT()].value() & MASK_HALF)
-					   | readHalf(*aluOut, true)<<16);
+					   | readHalf(_alu_out, true)<<16);
 			break;
 		case LWR:
 			_lmd.value( (r[_irDecoded->regT()].value() & (MASK_HALF<<16))
-					   | readHalf(*aluOut - 1, true));
+					   | readHalf(_alu_out - 1, true));
 			break;
 			
 			//store
 		case SB:
-			writeByte(*aluOut, r[_irDecoded->regT()].value());
+			writeByte(_alu_out, r[_irDecoded->regT()].value());
 			break;
 		case SH:
-			writeHalf(*aluOut, r[_irDecoded->regT()].value());
+			writeHalf(_alu_out, r[_irDecoded->regT()].value());
 			break;
 		case SW:
-			writeWord(*aluOut, r[_irDecoded->regT()].value());
+			writeWord(_alu_out, r[_irDecoded->regT()].value());
 			break;
 			
 		default:;
@@ -645,18 +590,19 @@ bool mips_cpu::accessMem(const uint32_t* aluOut){
 	return true;
 }
 
-void mips_cpu::writeBack(const uint32_t* aluOut){
-	fprintf(_debug_file, "Writing back result...\n");
+void mips_cpu::writeBack(void){
+	if( _debug > ERROR )
+		fprintf(_debug_file, "Writing back result...\n");
 	
 	switch(_irDecoded->type()){
 		case RType:
 			switch(_irDecoded->mnemonic()){
 
 				case SLTU:// if rs<rt, but alu does rs-rt, hence:
-					r[ _irDecoded->regD() ].value((signed)*aluOut<0 ? 1 : 0);
+					r[ _irDecoded->regD() ].value((signed)_alu_out<0 ? 1 : 0);
 					break;
 				case SLT:
-					r[ _irDecoded->regD() ].value((signed)*aluOut<0 ? 1 : 0);
+					r[ _irDecoded->regD() ].value((signed)_alu_out<0 ? 1 : 0);
 					break;
 					
 				case DIV:
@@ -668,7 +614,7 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 					break;
 					
 				default:
-					r[ _irDecoded->regD() ].value(*aluOut);
+					r[ _irDecoded->regD() ].value(_alu_out);
 			}
 			break;
 
@@ -683,14 +629,14 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 					break;
 
 				case SLTIU:
-					r[ _irDecoded->regT() ].value((signed)*aluOut<0 ? 1 : 0);
+					r[ _irDecoded->regT() ].value((signed)_alu_out<0 ? 1 : 0);
 					break;
 				case SLTI:
-					r[ _irDecoded->regT() ].value((signed)*aluOut<0 ? 1 : 0);
+					r[ _irDecoded->regT() ].value((signed)_alu_out<0 ? 1 : 0);
 					break;
 					
 				default:
-					r[ _irDecoded->regT() ].value(*aluOut);
+					r[ _irDecoded->regT() ].value(_alu_out);
 			}
 			break;
 			
@@ -705,11 +651,13 @@ uint8_t mips_cpu::readByte(uint32_t addr){
 	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr-align, 4, ret);
 	if(e == mips_Success){
 		uint8_t byte = ret[align];
-		fprintf(_debug_file, "Read 0x%X from 0x%X.\n", byte, addr);
+		if( _debug > ERROR )
+			fprintf(_debug_file, "Read 0x%X from 0x%X.\n", byte, addr);
 		return byte;
 	}
 	else{
-		fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
+		if( _debug )
+			fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
 		throw e;
 	}
 }
@@ -719,34 +667,39 @@ void mips_cpu::writeByte(uint32_t addr, uint8_t data){
 	uint8_t buf[4];
 	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr-align, 4, buf);
 	if(e != mips_Success){
-		fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
+		if( _debug )
+			fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
 		throw e;
 	}
 	buf[align] = data;
 	mips_mem_write((mips_mem_h)_mem_ptr, addr-align, 4, buf);
 	if(e != mips_Success){
-		fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
+		if( _debug )
+			fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
 		throw e;
 	}
-	else
+	else if( _debug > ERROR )
 		fprintf(_debug_file, "Wrote 0x%X to 0x%X.\n", (uint16_t)data, addr);
 }
 
 uint16_t mips_cpu::readHalf(uint32_t addr, bool allowUnaligned){
 	uint8_t align = addr%4;
 	if(!allowUnaligned && addr%2){
-		fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
+		if( _debug )
+			fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
 		throw mips_ExceptionInvalidAlignment;
 	}
 	uint8_t ret[align<3 ? 4 : 8];
 	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr-align, align<3 ? 4 : 8, ret);
 	if(e == mips_Success){
 		uint16_t half = (ret[align]<<8)|ret[align+1];
-		fprintf(_debug_file, "Read 0x%X from 0x%X.\n", half, addr);
+		if( _debug > ERROR )
+			fprintf(_debug_file, "Read 0x%X from 0x%X.\n", half, addr);
 		return half;
 	}
 	else{
-		fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
+		if( _debug )
+			fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
 		throw e;
 	}
 }
@@ -754,7 +707,8 @@ uint16_t mips_cpu::readHalf(uint32_t addr, bool allowUnaligned){
 void mips_cpu::writeHalf(uint32_t addr, uint16_t data, bool allowUnaligned){
 	uint8_t align = addr%4;
 	if(!allowUnaligned && addr%2){
-		fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
+		if( _debug )
+			fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
 		throw mips_ExceptionInvalidAlignment;
 	}
 	uint8_t buf[align<3 ? 4 : 8];
@@ -765,7 +719,8 @@ void mips_cpu::writeHalf(uint32_t addr, uint16_t data, bool allowUnaligned){
 	buf[align+1] = data&MASK_08b;
 	mips_mem_write((mips_mem_h)_mem_ptr, addr-align, align<3 ? 4 : 8, buf);
 	if(e != mips_Success){
-		fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
+		if( _debug )
+			fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
 		throw e;
 	}
 	else
@@ -776,13 +731,15 @@ uint32_t mips_cpu::readWord(uint32_t addr){
 	uint8_t buf[4];
 	mips_error e = mips_mem_read((mips_mem_h)_mem_ptr, addr, 4, buf);
 	if(e != mips_Success){
-		fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
+		if( _debug )
+			fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
 		throw e;
 	}
 	
 	uint32_t word = buf[0]<<24 | buf[1]<<16 | buf[2]<<8 | buf[3];
 	
-	fprintf(_debug_file, "Read 0x%X from 0x%X.\n", word, addr);
+	if( _debug > ERROR )
+		fprintf(_debug_file, "Read 0x%X from 0x%X.\n", word, addr);
 	return word;
 }
 
@@ -792,36 +749,45 @@ void mips_cpu::writeWord(uint32_t addr, uint32_t data){
 		buf[3-i] = (data >> (i*8))&0x000000FF;
 	mips_error e = mips_mem_write((mips_mem_h)_mem_ptr, addr, 4, buf);
 	if(e != mips_Success){
-		fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
+		if( _debug )
+			fprintf(_debug_file, "Error accessing mem[0x%X].\n", addr);
 		throw e;
 	}
 	else
-		fprintf(_debug_file, "Wrote 0x%X to 0x%X.\n", data, addr);
+		if( _debug > ERROR )
+			fprintf(_debug_file, "Wrote 0x%X to 0x%X.\n", data, addr);
 }
 
 void mips_cpu::link(void){
-	fprintf(_debug_file, "Linking 0x%X.\n", _npc.value()+4);
+	if( _debug > ERROR )
+		fprintf(_debug_file, "Linking 0x%X.\n", _npc.value()+4);
 	r[31].value(_npc.value()+4);
 }
 
 uint32_t mips_cpu::signExtend(uint8_t byte){
-	fprintf(_debug_file, "Sign extending byte: 0x%X.\n", byte);
+	if( _debug > ERROR )
+		fprintf(_debug_file, "Sign extending byte: 0x%X.\n", byte);
 	if( (byte&(MASK_BYTE>>1)) != byte ){
-		fprintf(_debug_file, "--------Padding 1's: 0x%X.\n", (byte|~MASK_BYTE));
+		if( _debug > INFO )
+			fprintf(_debug_file, "--------Padding 1's: 0x%X.\n", (byte|~MASK_BYTE));
 		return byte|~MASK_BYTE;
 	} else {
-		fprintf(_debug_file, "--------Padding 0's: 0x%X.\n", byte);
+		if( _debug > INFO )
+			fprintf(_debug_file, "--------Padding 0's: 0x%X.\n", byte);
 		return byte;
 	};
 }
 
 uint32_t mips_cpu::signExtend(uint16_t half){
-	fprintf(_debug_file, "Sign extending halfword: 0x%X.\n", half);
+	if( _debug > ERROR )
+		fprintf(_debug_file, "Sign extending halfword: 0x%X.\n", half);
 	if( (half&(MASK_HALF>>1)) != half ){
-		fprintf(_debug_file, "------------Padding 1's: 0x%X.\n", (half|~MASK_HALF));
+		if( _debug > INFO )
+			fprintf(_debug_file, "------------Padding 1's: 0x%X.\n", (half|~MASK_HALF));
 		return half|~MASK_HALF;
 	} else {
-		fprintf(_debug_file, "------------Padding 0's: 0x%X.\n", half);
+		if( _debug > INFO )
+			fprintf(_debug_file, "------------Padding 0's: 0x%X.\n", half);
 		return half;
 	};
 }

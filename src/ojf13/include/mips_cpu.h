@@ -144,9 +144,9 @@ public:
 protected:
 	void fetchInstr(void);
 	void decode(void);
-	void fetchRegs(uint32_t*, uint32_t*);
-	bool accessMem(const uint32_t*);
-	void writeBack(const uint32_t*);
+	void fetchRegs(void);
+	bool accessMem(void);
+	void writeBack(void);
 	
 	uint8_t readByte(uint32_t);
 	void writeByte(uint32_t, uint8_t);
@@ -175,6 +175,7 @@ protected:
 	
 private:
 	void match(Instruction&, unsigned);
+	bool branch(bool, bool=false);
 	
 	uint32_t		_alu_in_a;
 	uint32_t		_alu_in_b;
