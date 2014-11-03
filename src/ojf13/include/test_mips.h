@@ -36,7 +36,7 @@ typedef uint32_t (*verifyFuncI)(uint32_t, uint16_t);
 typedef uint32_t (*verifyFuncB)(uint32_t, uint32_t, uint32_t);
 typedef uint32_t (*verifyFuncJ)(uint32_t, uint32_t);
 typedef hilo (*verifyFuncHL)(uint32_t, uint32_t);
-typedef uint32_t (*verifyFuncLS)(uint32_t, uint8_t, uint32_t);
+typedef uint32_t (*verifyFuncLS)(uint32_t, uint32_t, uint32_t);
 testResult RTypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncR);
 testResult ITypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncI);
 testResult branchResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncB);

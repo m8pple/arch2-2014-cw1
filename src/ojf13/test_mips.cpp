@@ -12,10 +12,21 @@
 #include <random>
 #include <string>
 #include <iostream>
+#include <climits>
+
+#define MEM_SIZE 0x100000
 
 int main(){
-    mips_mem_h mem = mips_mem_create_ram(0xFFFFFFFF, 4);
-    mips_cpu_h cpu = mips_cpu_create(mem);
+    mips_mem_h mem = mips_mem_create_ram(MEM_SIZE, 4);
+	mips_cpu_h cpu;
+	
+	if(mem)
+		cpu = mips_cpu_create(mem);
+	else{
+		std::cout << "Insufficient memory." << std::endl;
+		return -1;
+	}
+	
 	srand((unsigned)time(NULL));
 	std::cout << std::hex;
 	
@@ -581,7 +592,7 @@ testResult JTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verify
 	
 	int correct;
 	mips_error e = mips_Success, gotE;
-	uint32_t pcInit= rand()&0x30000000;
+	uint32_t pcInit= (rand()%MEM_SIZE)&0xFFFFFFFC;
 	uint32_t index = rand()&0x03FFFFFC;	//26 bits, aligned
 
 	try{		
@@ -950,14 +961,16 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 		(uint8_t)chooseValue8()
 	};
 	uint8_t zero[4] = {0};
+	
+	int16_t offset	= rand()<<2;	//align
+	uint32_t addr	= 0x100;		//avoid program memory
 	uint8_t align = 0;
+	
 	uint32_t odata;
 	
 	uint32_t exp;
 	
 	try{
-		int16_t offset	= rand()<<2;	//align
-		uint32_t addr	= 0x100;		//avoid program memory
 		
 		if(   mnemonic == LB || mnemonic == LBU || mnemonic == LWL || mnemonic == LWR
 		   || mnemonic == SH || mnemonic == SB ){
@@ -1006,25 +1019,26 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 			//Write a word, even if only testing a byte/half
 			e = mips_mem_write(mem, addr+offset-align, 4, idata);
 
-			if(e){
+			//If there was an error writing to here, we're testing we get the error on load
+			/*if(e){
 				std::cout << "Error " << e << " writing to memory." << std::endl;
 				return result(mnemonic);
-			}
+			}*/
 
 			//Zero around it
 			e = mips_mem_write(mem, addr+offset-align-4, 4, zero);
-
-			if(e){
+			
+			/*if(e){
 				std::cout << "Error " << e << " writing to memory." << std::endl;
 				return result(mnemonic);
-			}
+			}*/
 
 			e = mips_mem_write(mem, addr+offset-align+4, 4, zero);
 
-			if(e){
+			/*if(e){
 				std::cout << "Error " << e << " writing to memory." << std::endl;
 				return result(mnemonic);
-			}
+			}*/
 
 			gotE = mips_cpu_step(cpu);
 
@@ -1039,10 +1053,10 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 			//Zero the address we want to test writing to
 			e = mips_mem_write(mem, addr+offset-align, 4, zero);
 
-			if(e){
+			/*if(e){
 				std::cout << "Error " << e << " writing to memory." << std::endl;
 				return result(mnemonic);
-			}
+			}*/
 
 			e = mips_cpu_set_register(cpu, 2, (idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3]));
 
@@ -1056,10 +1070,10 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 			uint8_t t[4];
 			e = mips_mem_read(mem, addr+offset-align, 4, t);
 
-			if(e){
+			/*if(e){
 				std::cout << "Error " << e << " accessing memory." << std::endl;
 				return result(mnemonic);
-			}
+			}*/
 
 			odata = t[0]<<24|t[1]<<16|t[2]<<8|t[3];
 		}
@@ -1069,7 +1083,7 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 	}
 
 	try{
-		exp = verfunc( idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align, rtInit );
+		exp = verfunc( idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], addr+offset, rtInit );
 		if( gotE ){
 			//Simulator threw exception, shouldn't have.
 			std::cout << "Error: Incorrect result." << std::endl;
@@ -1163,57 +1177,60 @@ testResult ANDIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, ANDI, (verifyFuncI)ANDIverify);
 }
 
+//Branch tests need not check for access violation if address out of range
+//	since the PC is checked, but that address in memory never loaded.
+//outOfRange test checks this behaviour is properly handled.
 uint32_t BEQverify(uint32_t r1, uint32_t r2, uint16_t offset){
-	return ((signed)r1==(signed)r2) ? 4+(offset<<2) : 8;
+	return ((signed)r1==(signed)r2) ? 4+(offset<<2): 8;
 }
 testResult BEQResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BEQ, (verifyFuncB)BEQverify);
 }
 
 uint32_t BGEZverify(uint32_t r1, uint32_t, uint16_t offset){
-	return ((signed)r1>=(signed)0) ? 4+(offset<<2) : 8;
+	return ((signed)r1>=0) ? 4+(offset<<2): 8;
 }
 testResult BGEZResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BGEZ, (verifyFuncB)BGEZverify);
 }
 
 uint32_t BGEZALverify(uint32_t r1, uint32_t, uint16_t offset){
-	return ((signed)r1>=(signed)0) ? 4+(offset<<2) : 8;
+	return ((signed)r1>=0) ? 4+(offset<<2): 8;
 }
 testResult BGEZALResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BGEZAL, (verifyFuncB)BGEZALverify);
 }
 
 uint32_t BGTZverify(uint32_t r1, uint32_t, uint16_t offset){
-	return ((signed)r1>(signed)0) ? 4+(offset<<2) : 8;
+	return ((signed)r1>0) ? 4+(offset<<2): 8;
 }
 testResult BGTZResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BGTZ, (verifyFuncB)BGTZverify);
 }
 
 uint32_t BLEZverify(uint32_t r1, uint32_t, uint16_t offset){
-	return ((signed)r1<=(signed)0) ? 4+(offset<<2) : 8;
+	return ((signed)r1<=0) ? 4+(offset<<2): 8;
 }
 testResult BLEZResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BLEZ, (verifyFuncB)BLEZverify);
 }
 
 uint32_t BLTZverify(uint32_t r1, uint32_t, uint16_t offset){
-	return ((signed)r1<(signed)0) ? 4+(offset<<2) : 8;
+	return ((signed)r1<0) ? 4+(offset<<2): 8;
 }
 testResult BLTZResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BLTZ, (verifyFuncB)BLTZverify);
 }
 
 uint32_t BLTZALverify(uint32_t r1, uint32_t, uint16_t offset){
-	return ((signed)r1<(signed)0) ? 4+(offset<<2) : 8;
+	return ((signed)r1<0) ? 4+(offset<<2): 8;
 }
 testResult BLTZALResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BLTZAL, (verifyFuncB)BLTZALverify);
 }
 
 uint32_t BNEverify(uint32_t r1, uint32_t r2, uint16_t offset){
-	return ((signed)r1!=(signed)r2) ? 4+(offset<<2) : 8;
+	return ((signed)r1!=(signed)r2) ? 4+(offset<<2): 8;
 }
 testResult BNEResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BNE, (verifyFuncB)BNEverify);
@@ -1247,6 +1264,9 @@ testResult DIVUResult(mips_cpu_h cpu, mips_mem_h mem){
 	return hiloResult(cpu, mem, DIVU, DIVUverify);
 }
 
+//J,JR,JAL don't check for an access violation exception
+//	since the test only checks PC, so an out of range address
+//	is never (attempted to be) loaded.
 uint32_t Jverify(uint32_t pcPrior, uint32_t idx){
 	return (pcPrior&0xF0000000)|(idx<<2);
 }
@@ -1268,15 +1288,24 @@ testResult JRResult(mips_cpu_h cpu, mips_mem_h mem){
 	return JTypeResult(cpu, mem, JR, JRverify);
 }
 
-uint32_t LBverify(uint32_t data, uint8_t align, uint32_t){
+
+uint32_t LBverify(uint32_t data, uint32_t effaddr, uint32_t){
+	uint8_t align = effaddr%4;
 	uint32_t ret = (data>>(24-align*8))&0x000000FF;
+
+	if( effaddr > MEM_SIZE )
+		throw mips_ExceptionInvalidAddress;
 	return ret&0x00000080 ? ret|0xFFFFFF00 : ret;
 }
 testResult LBResult(mips_cpu_h cpu, mips_mem_h mem){
 	return loadstoreResult(cpu, mem, LB, LBverify);
 }
 
-uint32_t LBUverify(uint32_t data, uint8_t align, uint32_t){
+uint32_t LBUverify(uint32_t data, uint32_t effaddr, uint32_t){
+	uint8_t align = effaddr%4;
+	
+	if( effaddr > MEM_SIZE )
+		throw mips_ExceptionInvalidAddress;
 	return (data>>(24-align*8))&0x000000FF;
 }
 testResult LBUResult(mips_cpu_h cpu, mips_mem_h mem){
@@ -1290,24 +1319,36 @@ testResult LUIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, LUI, (verifyFuncI)LUIverify);
 }
 
-uint32_t LWverify(uint32_t data, uint8_t align, uint32_t){
-	if(align)
+uint32_t LWverify(uint32_t data, uint32_t effaddr, uint32_t){
+	uint8_t align = effaddr%4;
+	
+	if( align )
 		throw mips_ExceptionInvalidAlignment;
+	else if( effaddr > MEM_SIZE )
+		throw mips_ExceptionInvalidAddress;
 	else
-		 return data;
+		return data;
 }
 testResult LWResult(mips_cpu_h cpu, mips_mem_h mem){
 	return loadstoreResult(cpu, mem, LW, LWverify);
 }
 
-uint32_t LWLverify(uint32_t data, uint8_t align, uint32_t rt){
+uint32_t LWLverify(uint32_t data, uint32_t effaddr, uint32_t rt){
+	uint8_t align = effaddr%4;
+	
+	if( effaddr > MEM_SIZE )
+		throw mips_ExceptionInvalidAddress;
 	return (data<<(align*8) & (MASK_16b<<16)) | (rt & MASK_16b);
 }
 testResult LWLResult(mips_cpu_h cpu, mips_mem_h mem){
 	return loadstoreResult(cpu, mem, LWL, LWLverify);
 }
 
-uint32_t LWRverify(uint32_t data, uint8_t align, uint32_t rt){
+uint32_t LWRverify(uint32_t data, uint32_t effaddr, uint32_t rt){
+	uint8_t align = effaddr%4;
+	
+	if( effaddr > MEM_SIZE )
+		throw mips_ExceptionInvalidAddress;
 	return (data>>(24-align*8) & MASK_16b) | (rt & MASK_16b<<16);
 }
 testResult LWRResult(mips_cpu_h cpu, mips_mem_h mem){
@@ -1350,16 +1391,24 @@ testResult ORIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, ORI, (verifyFuncI)ORIverify);
 }
 
-uint32_t SBverify(uint32_t data, uint8_t align, uint32_t){
+uint32_t SBverify(uint32_t data, uint32_t effaddr, uint32_t){
+	uint8_t align = effaddr%4;
+	
+	if( effaddr > MEM_SIZE )
+		throw mips_ExceptionInvalidAddress;
 	return (data&MASK_08b)<<(3-align)*8;
 }
 testResult SBResult(mips_cpu_h cpu, mips_mem_h mem){
 	return loadstoreResult(cpu, mem, SB, SBverify);
 }
 
-uint32_t SHverify(uint32_t data, uint8_t align, uint32_t){
-	if(align%2)
+uint32_t SHverify(uint32_t data, uint32_t effaddr, uint32_t){
+	uint8_t align = effaddr%4;
+	
+	if( align%2 )
 		throw mips_ExceptionInvalidAlignment;
+	else if( effaddr > MEM_SIZE )
+		throw mips_ExceptionInvalidAddress;
 	else
 		return align ? data&MASK_16b : (data&MASK_16b)<<16;
 }
@@ -1453,9 +1502,13 @@ testResult SRLVResult(mips_cpu_h cpu, mips_mem_h mem){
 	return RTypeResult(cpu, mem, SRLV, (verifyFuncR)SRLVverify);
 }
 
-uint32_t SWverify(uint32_t data, uint8_t align, uint32_t){
-	if(align)
+uint32_t SWverify(uint32_t data, uint32_t effaddr, uint32_t){
+	uint8_t align = effaddr%4;
+	
+	if( align )
 		throw mips_ExceptionInvalidAlignment;
+	else if( effaddr > MEM_SIZE )
+		throw mips_ExceptionInvalidAddress;
 	else
 		return data;
 }
