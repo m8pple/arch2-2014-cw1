@@ -20,15 +20,15 @@ int main(){
 	std::cout << std::hex;
 	
     mips_test_begin_suite();
+	
+	runTest(initialPC, cpu, mem, 1);		//
+	runTest(constInputs, cpu, mem, 1);		// It's hard to imagine that the correctness
+	runTest(registerReset, cpu, mem, 1);	//	of these would be input-dependent without
+	runTest(memoryIO, cpu, mem, 1);			//	everything else failing hard, so only do once.
+	runTest(noOperation, cpu, mem, 1);		//
 
 	for(unsigned i=0; i<NUM_OP_TESTS; ++i)
-		runTest(opTests[i], cpu, mem, 128);
-	
-	runTest(constInputs, cpu, mem, 1);		//
-	runTest(registerReset, cpu, mem, 1);	// It's hard to imagine that the correctness
-	runTest(memoryIO, cpu, mem, 1);			//	of these would be input-dependent without
-	runTest(noOperation, cpu, mem, 1);		//	everything else failing hard, so only do once.
-											//
+		runTest(opTests[i], cpu, mem, 1024);
 	
     mips_test_end_suite();
 	
@@ -111,6 +111,53 @@ void runTest(testResult(*test)(mips_cpu_h, mips_mem_h),
 	
 }
 
+testResult initReturn(int correct=0){
+	return {"<INTERNAL>", "Check PC is initially zero.", correct};
+}
+testResult initialPC(mips_cpu_h cpu, mips_mem_h mem){
+	uint32_t got1, got2;
+	mips_error e = mips_Success;
+	uint8_t zero[12] = {0};
+	
+	try{
+		e = mips_mem_write(mem, 0x0, 12, zero);
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return initReturn();
+		}
+		
+		e = mips_cpu_get_pc(cpu, &got1);
+		
+		if(e){
+			std::cout << "Error " << e << " getting PC." << std::endl;
+			return initReturn();
+		}
+		
+		e = mips_cpu_step(cpu);
+		
+		if(e){
+			std::cout << "Error: Unexpected exception " << e << " performing NOP." << std::endl;
+			return initReturn();
+		}
+		
+		e = mips_cpu_get_pc(cpu, &got2);
+		
+		if(e){
+			std::cout << "Error " << e << " accessing registers." << std::endl;
+			return initReturn();
+		}
+	}
+	catch(mips_error e){
+		std::cout << "Error: Uncaught exception " << e << std::endl;
+		return initReturn();
+	}
+	
+	return initReturn(got1==0 && got2==4);
+}
+testResult registerReturn(int correct=0){
+	return {"<INTERNAL>", "Check all registers zeroed after reset.", correct};
+}
 testResult registerReset(mips_cpu_h cpu, mips_mem_h){
     uint32_t got;
     int correct, i=0;

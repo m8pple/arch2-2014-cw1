@@ -44,6 +44,7 @@ testResult JTypeResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncJ);
 testResult hiloResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncHL);
 testResult loadstoreResult(mips_cpu_h, mips_mem_h, mips_asm, verifyFuncLS);
 
+testResult initialPC(mips_cpu_h, mips_mem_h);
 testResult registerReset(mips_cpu_h, mips_mem_h);
 testResult memoryIO(mips_cpu_h, mips_mem_h);
 testResult constInputs(mips_cpu_h, mips_mem_h);
