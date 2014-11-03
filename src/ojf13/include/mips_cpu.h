@@ -38,6 +38,7 @@ struct mips_register{
 public:
 	mips_register(void);
 	mips_register(bool);
+	mips_register(uint32_t, bool);
 	
 	uint32_t value(void) const;
 	void value(uint32_t);
@@ -119,8 +120,9 @@ private:
 	static hilo alu_multiplyu(uint32_t*, const uint32_t*, const uint32_t*);
 	static hilo alu_shiftleft(uint32_t*, const uint32_t*, const uint32_t*);
 	static hilo alu_subtract(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_subtractnoex(uint32_t*, const uint32_t*, const uint32_t*);
 	static hilo alu_subtractu(uint32_t*, const uint32_t*, const uint32_t*);
-	static hilo alu_subtractnowrap(uint32_t*, const uint32_t*, const uint32_t*);
+	static hilo alu_subtractnoexu(uint32_t*, const uint32_t*, const uint32_t*);
 	static hilo alu_shiftright(uint32_t*, const uint32_t*, const uint32_t*);
 	static hilo alu_shiftrightu(uint32_t*, const uint32_t*, const uint32_t*);
 	static hilo alu_xor(uint32_t*, const uint32_t*, const uint32_t*);
@@ -172,6 +174,8 @@ protected:
 	mips_mem*		_mem_ptr;
 	
 private:
+	void match(Instruction&, unsigned);
+	
 	uint32_t		_alu_in_a;
 	uint32_t		_alu_in_b;
 	uint32_t		_alu_out;

@@ -19,6 +19,7 @@
  */
 mips_register::mips_register(void) : _value(0), _isZero(false){};
 mips_register::mips_register(bool isZero) : _value(0), _isZero(isZero){};
+mips_register::mips_register(uint32_t v, bool isZero) : _value(v), _isZero(isZero){};
 
 uint32_t mips_register::value(void) const{
 	return _value;
@@ -34,7 +35,7 @@ void mips_register::value(uint32_t iVal){
  * MIPS GP register
  */
 mips_regset_gp::mips_regset_gp(void) : _r0(false){};
-	
+
 mips_register&  mips_regset_gp::operator[](unsigned idx){
 	if(idx >= MIPS_NUM_REG)
 		throw mips_ErrorInvalidArgument;
@@ -46,7 +47,8 @@ mips_register&  mips_regset_gp::operator[](unsigned idx){
 /*
  * MIPS SP register
  */
-mips_reg_sp::mips_reg_sp(void) : mips_register(false){};
+mips_reg_sp::mips_reg_sp(FILE** f, const debug_level* dl) : mips_register(false), _debug(dl), _debug_file(f){};
+mips_reg_sp::mips_reg_sp(uint32_t v, FILE** f, const debug_level* dl) : mips_register(v, false), _debug(dl), _debug_file(f){};
 
 void mips_reg_sp::internal_set(uint32_t iVal){
 	_value = iVal;
@@ -56,10 +58,13 @@ void mips_reg_sp::internal_set(uint32_t iVal){
 /*
  * MIPS PC register
  */
-mips_reg_pc::mips_reg_pc(mips_reg_sp* npc) : _npc(npc), mips_reg_sp(){};
+mips_reg_pc::mips_reg_pc(mips_reg_sp* npc, FILE** f, const debug_level* dl) : mips_reg_sp(f, dl), _npc(npc){
+	_value = 0;
+	_npc->internal_set(4);
+};
 
 void mips_reg_pc::advance(void){
-	std::cout << "Advancing PC to NPC (0x" << _npc->value() << ")" << std::endl;
+	fprintf(*_debug_file, "Advancing PC to NPC (0x%X).\n", _npc->value());
 	internal_set(_npc->value());
 	_npc->internal_set(_npc->value()+4);
 }
@@ -68,8 +73,8 @@ void mips_reg_pc::advance(void){
 /*
  * MIPS ALU
  */
-mips_alu::mips_alu(uint32_t* out, const uint32_t* a, const uint32_t* b,
-				   hilo* hilo) : outp(out), in_a(a), in_b(b), _hilo(hilo){};
+mips_alu::mips_alu(uint32_t* out, const uint32_t* a, const uint32_t* b, hilo* hilo, FILE** f, const debug_level* dl) :
+outp(out), in_a(a), in_b(b), _hilo(hilo), _debug_file(f), _debug(dl){};
 
 void mips_alu::setOperation(mips_asm mnem){
 	switch(mnem){
@@ -102,8 +107,8 @@ void mips_alu::setOperation(mips_asm mnem){
 		case BLTZ:
 		case BLTZAL:
 		case BNE:
-		case SLT:
-		case SLTI:
+			_operation = alu_subtractnoex;
+			break;
 		case SUB:
 			_operation = alu_subtract;
 			break;
@@ -132,9 +137,13 @@ void mips_alu::setOperation(mips_asm mnem){
 		case SLLV:
 			_operation = alu_shiftleft;
 			break;
+		case SLT:
+		case SLTI:
+			_operation = alu_subtractnoex;
+			break;
 		case SLTIU:
 		case SLTU:
-			_operation = alu_subtractnowrap;
+			_operation = alu_subtractnoexu;
 			break;
 		case SUBU:
 			_operation = alu_subtractu;
@@ -155,7 +164,7 @@ void mips_alu::setOperation(mips_asm mnem){
 void mips_alu::execute(void) const{
 	fprintf(*_debug_file, "Executing...\n");
 	*_hilo = _operation(outp, in_a, in_b);
-	std::cout << "Result of ALU operation was 0x" << *outp << std::endl;
+	fprintf(*_debug_file, "Result of ALU operation was 0x%X.\n", *outp);
 }
 
 hilo mips_alu::alu_add(uint32_t* out, const uint32_t* a, const uint32_t* b){
@@ -215,15 +224,32 @@ hilo mips_alu::alu_shiftleft(uint32_t* out, const uint32_t* a, const uint32_t* b
 	return {};
 }
 hilo mips_alu::alu_subtract(uint32_t* out, const uint32_t* a, const uint32_t* b){
-	*out = (signed)(*a) - (signed)(*b);
+	if(((signed)*b>0 && (signed)*a<INT32_MIN+(signed)*b) ||
+	   ((signed)*b<0 && (signed)*a>INT32_MAX-(signed)*b))
+		throw mips_ExceptionArithmeticOverflow;
+	else
+		*out = (signed)*a-(signed)*b;
+	return {};
+}
+hilo mips_alu::alu_subtractnoex(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	//nasty hack to fix overflow issues.. :/
+	*out = (signed)*a < (signed)*b ? -1 : (signed)*a == (signed)*b ? 0 : 1;
+	/*
+	 int64_t p = (signed)(*a) - (signed)(*b);
+	 if( p>INT32_MAX )
+		*out = (uint32_t)INT32_MAX;
+	 else if( p<INT32_MIN )
+		*out = (uint32_t)INT32_MIN;
+	 */
 	return {};
 }
 hilo mips_alu::alu_subtractu(uint32_t* out, const uint32_t* a, const uint32_t* b){
 	*out = (*a)-(*b);
 	return {};
 }
-hilo mips_alu::alu_subtractnowrap(uint32_t* out, const uint32_t* a, const uint32_t* b){
-	*out = (*a)<(*b) ? 0 : (*a)-(*b);
+hilo mips_alu::alu_subtractnoexu(uint32_t* out, const uint32_t* a, const uint32_t* b){
+	//ugh
+	*out = *a < *b ? -1 : *a == *b ? 0 : 1;
 	return {};
 }
 hilo mips_alu::alu_shiftright(uint32_t* out, const uint32_t* a, const uint32_t* b){
@@ -253,7 +279,7 @@ _stage(IF), _mem_ptr(mem), _debug(dl), _debug_file(f){};
 void mips_cpu::reset(void){
 	
 	//Zero registers
-	for(int i=0; i<MIPS_NUM_REG; ++i)
+	for(unsigned i=0; i<MIPS_NUM_REG; ++i)
 		r[i].value(0);
 	
 	_pc.internal_set(0);
@@ -278,7 +304,12 @@ void mips_cpu::step(void){
 	
 	_stage = EX;
 	//magic
-	_alu.execute();
+	try{
+		_alu.execute();
+	} catch(mips_error e){
+		_pc.advance();
+		throw e;
+	}
 	
 	_stage = MEM;
 	// bit less magic
@@ -411,12 +442,12 @@ void mips_cpu::fetchRegs(uint32_t* aluInA, uint32_t* aluInB){
 					*aluInA = _lo.value();
 					//*aluInB = 0;
 					break;
-				
+
 				default:
 					*aluInA = r[ _irDecoded->regS() ].value();
 			}
 			break;
-		
+
 		case IType:
 			*aluInA = r[ _irDecoded->regS() ].value();
 			switch(_irDecoded->mnemonic()){
@@ -622,7 +653,7 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 			switch(_irDecoded->mnemonic()){
 
 				case SLTU:// if rs<rt, but alu does rs-rt, hence:
-					r[ _irDecoded->regD() ].value((unsigned)*aluOut ? 0 : 1);
+					r[ _irDecoded->regD() ].value((signed)*aluOut<0 ? 1 : 0);
 					break;
 				case SLT:
 					r[ _irDecoded->regD() ].value((signed)*aluOut<0 ? 1 : 0);
@@ -652,10 +683,10 @@ void mips_cpu::writeBack(const uint32_t* aluOut){
 					break;
 
 				case SLTIU:
-					r[ _irDecoded->regT() ].value((unsigned)*aluOut ? 0 : 1);
+					r[ _irDecoded->regT() ].value((signed)*aluOut<0 ? 1 : 0);
 					break;
 				case SLTI:
-					r[ _irDecoded->regT() ].value((signed)*aluOut>0 ? 0 : 1);
+					r[ _irDecoded->regT() ].value((signed)*aluOut<0 ? 1 : 0);
 					break;
 					
 				default:
