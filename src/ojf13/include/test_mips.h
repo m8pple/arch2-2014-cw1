@@ -50,6 +50,7 @@ testResult memoryIO(mips_cpu_h, mips_mem_h);
 testResult outOfRange(mips_cpu_h, mips_mem_h);
 testResult constInputs(mips_cpu_h, mips_mem_h);
 testResult noOperation(mips_cpu_h, mips_mem_h);
+testResult isPrime(mips_cpu_h, mips_mem_h);
 
 testResult ADDResult(mips_cpu_h, mips_mem_h);
 testResult ADDIResult(mips_cpu_h, mips_mem_h);

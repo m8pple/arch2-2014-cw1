@@ -37,8 +37,13 @@ int main(){
 	runTest(constInputs, cpu, mem, 1);		// It's hard to imagine that the correctness
 	runTest(registerReset, cpu, mem, 1);	//	of these would be input-dependent without
 	runTest(memoryIO, cpu, mem, 1);			//	everything else failing hard, so only do once.
-	runTest(outOfRange, cpu, mem, 1);		//
 	runTest(noOperation, cpu, mem, 1);		//
+	
+	runTest(isPrime, cpu, mem, 5);
+	
+#if MEM_SIZE<UINTMAX	//Otherwise there's nothing to test
+	runTest(outOfRange, cpu, mem, 1);
+#endif
 
 	for(unsigned i=0; i<NUM_OP_TESTS; ++i)
 		runTest(opTests[i], cpu, mem, 1024);
@@ -438,6 +443,49 @@ testResult noOperation(mips_cpu_h cpu, mips_mem_h mem){
 	}
 	
 	return nopReturn(correct);
+}
+
+bool isPrimeC(unsigned n){
+	for(int i=2; i<n; ++i)
+		if( n%i == 0 )
+			return false;
+	return true;
+}
+testResult isPrime(mips_cpu_h cpu, mips_mem_h mem){
+	uint32_t n = rand()%1000; //let's.. keep it sensible(ish)
+#define PRIME_POS  0x30
+#define NPRIME_POS 0x40
+	
+	mips_cpu_reset(cpu);
+	
+	mips_cpu_set_register(cpu, 1, n);
+	mips_mem_write(mem, 0x0, 4, Instruction(ADDI, 1, 2, -1).bufferedVal());
+	mips_mem_write(mem, 0x4, 4, Instruction(SLTI, 2, 3, 2).bufferedVal());
+	mips_mem_write(mem, 0x8, 4, Instruction(BGTZ, 3, (PRIME_POS-0x8-4)>>2).bufferedVal());
+	mips_mem_write(mem, 0xc, 4, Instruction(DIV, 1, 2, 0, 0).bufferedVal());
+	mips_mem_write(mem, 0x10, 4, Instruction(MFHI, 0, 0, 3, 0).bufferedVal());
+	mips_mem_write(mem, 0x14, 4, Instruction(BEQ, 3, 0, (NPRIME_POS-0x14-4)>>2).bufferedVal());
+	mips_mem_write(mem, 0x18, 4, Instruction(ADDI, 2, 2, -1).bufferedVal());
+	mips_mem_write(mem, 0x1c, 4, Instruction(J, 0x4>>2).bufferedVal());
+	//NOP
+	mips_mem_write(mem, 0x20, 4, Instruction(SLL, 0, 0, 0, 0).bufferedVal());
+	
+	uint32_t pc=0;
+	while( pc <= 0x20 ){
+		mips_cpu_step(cpu);
+		mips_cpu_get_pc(cpu, &pc);
+	}
+	
+	bool correct;
+	
+	if( pc == PRIME_POS )
+		correct = isPrimeC(n)==true;
+	else if( pc == NPRIME_POS )
+		correct = isPrimeC(n)==false;
+	else
+		correct = false;
+	
+	return {"<INTERNAL>", "Test primality.", correct};
 }
 
 testResult result(mips_asm mnemonic, int correct=0){

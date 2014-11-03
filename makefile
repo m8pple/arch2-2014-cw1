@@ -31,7 +31,7 @@ USER_TEST_SRCS = \
 
 USER_TEST_OBJECTS = $(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(USER_TEST_SRCS)))
 
-#src/$(LOGIN)/test_mips : $(USER_TEST_OBJECTS) $(DEFAULT_OBJECTS) $(USER_CPU_OBJECTS)
+src/$(LOGIN)/test_mips : $(USER_TEST_OBJECTS) $(DEFAULT_OBJECTS) $(USER_CPU_OBJECTS)
 
 fragments/run_fibonacci : $(DEFAULT_OBJECTS) $(USER_CPU_OBJECTS)
     
