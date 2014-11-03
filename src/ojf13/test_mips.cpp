@@ -446,7 +446,7 @@ testResult noOperation(mips_cpu_h cpu, mips_mem_h mem){
 }
 
 bool isPrimeC(unsigned n){
-	for(int i=2; i<n; ++i)
+	for(unsigned i=2; i<n; ++i)
 		if( n%i == 0 )
 			return false;
 	return true;
