@@ -295,8 +295,17 @@ void mips_cpu::step(void){
 	
 	_stage = IF;
 	
-	fetchInstr();
-	
+	try{
+		fetchInstr();
+	} catch(mips_error e){
+		if( e == mips_ExceptionInvalidAddress )
+			e = mips_ExceptionAccessViolation;
+		//If we're already in invalid memory we may as well just HCF..
+		//	But there's the off-chance that we only skipped out in the branch delay slot
+		//	(presumably/hopefully) with a branch back in.
+		_pc.advance();
+		throw e;
+	}
 	_stage = ID;
 	
 	decode();

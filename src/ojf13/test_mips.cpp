@@ -37,6 +37,7 @@ int main(){
 	runTest(constInputs, cpu, mem, 1);		// It's hard to imagine that the correctness
 	runTest(registerReset, cpu, mem, 1);	//	of these would be input-dependent without
 	runTest(memoryIO, cpu, mem, 1);			//	everything else failing hard, so only do once.
+	runTest(outOfRange, cpu, mem, 1);		//
 	runTest(noOperation, cpu, mem, 1);		//
 
 	for(unsigned i=0; i<NUM_OP_TESTS; ++i)
@@ -49,6 +50,7 @@ int main(){
 	return 0;
 }
 
+//Uniformly choose between a few edge cases, and random numbers
 uint32_t chooseValue32(void){
 	switch( rand()&0x7 ){
 		case 1:
@@ -266,6 +268,47 @@ testResult memoryIO(mips_cpu_h, mips_mem_h mem){
 	}
 	
 	return memoryReturn(correct);
+}
+
+testResult oorReturn(int correct=0){
+	return {"<INTERNAL>", "Check exception on stepping PC out of range.", correct};
+}
+testResult outOfRange(mips_cpu_h cpu, mips_mem_h mem){
+	mips_error e = mips_Success, gotE;
+	
+	try{
+		e = mips_cpu_reset(cpu);
+		
+		if(e){
+			std::cout << "Error " << e << " resetting CPU" << std::endl;
+			return oorReturn();
+		}
+		
+		e = mips_cpu_set_pc(cpu, MEM_SIZE-(MEM_SIZE%4)+4);
+		
+		if(e){
+			std::cout << "Error " << e << " setting PC" << std::endl;
+			return oorReturn();
+		}
+		
+		gotE = mips_cpu_step(cpu);
+		
+		if( !gotE ){
+			std::cout << "Error: Stepping PC out of range did not trap." << std::endl;
+			return oorReturn();
+		}
+		else if( gotE  != mips_ExceptionAccessViolation ){
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: Exception " << gotE << std::endl;
+			std::cout << "--Expected: Exception " << mips_ExceptionAccessViolation << std::endl;
+			return oorReturn();
+		}
+		else
+			return oorReturn(1);
+	} catch(...){
+		std::cout << "Error: uncaught exception performing NOP." << std::endl;
+		return oorReturn();
+	}
 }
 
 testResult constReturn(int correct=0){
