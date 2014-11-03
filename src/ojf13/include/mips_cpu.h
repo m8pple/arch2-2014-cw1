@@ -27,6 +27,13 @@ typedef enum _mips_cpu_stage{
 	WB	=4
 } mips_cpu_stage;
 
+typedef enum _debug_level{
+	NONE	=0,
+	ERROR	=1,
+	INFO	=2,
+	VERBOSE	=3
+} debug_level;
+
 struct mips_register{
 public:
 	mips_register(void);
@@ -55,19 +62,24 @@ private:
 
 struct mips_reg_sp: mips_register{
 public:
-	mips_reg_sp(void);
+	mips_reg_sp(FILE**, const debug_level*);
+	mips_reg_sp(uint32_t, FILE**, const debug_level*);
 
 	void internal_set(uint32_t);
+	
+protected:
+	const debug_level* _debug;
+	FILE** _debug_file;
 	
 private:
 };
 
 struct mips_reg_pc: mips_reg_sp{
 public:
-	mips_reg_pc(mips_reg_sp*);
+	mips_reg_pc(mips_reg_sp*, FILE**, const debug_level*);
 	
 	void advance(void);
-	
+
 private:
 	mips_reg_sp* _npc;
 };
@@ -79,7 +91,7 @@ struct hilo{
 
 struct mips_alu{
 public:
-	mips_alu(uint32_t*, const uint32_t*, const uint32_t*, hilo*);
+	mips_alu(uint32_t*, const uint32_t*, const uint32_t*, hilo*, FILE**, const debug_level*);
 	
 	void execute(void) const;
 	void setOperation(mips_asm);
@@ -87,6 +99,10 @@ public:
 	uint32_t*	outp;
 	const uint32_t* in_a;
 	const uint32_t* in_b;
+	
+protected:
+	const debug_level* _debug;
+	FILE** _debug_file;
 	
 private:
 	hilo* _hilo;
@@ -112,13 +128,14 @@ private:
 
 struct mips_cpu{
 public:
-	mips_cpu(mips_mem*);
+	mips_cpu(mips_mem*, FILE* =stdout, debug_level=ERROR);
 	
 	void reset(void);
 	void step(void);
 	//make sure we know "we are the CPU" when setting
 	void internal_pc_set(uint32_t);
 	uint32_t pc(void) const;
+	void setDebug(FILE*, debug_level);
 	
 	mips_regset_gp	r;
 	
@@ -160,4 +177,6 @@ private:
 	uint32_t		_alu_out;
 	hilo			_alu_hilo;
 	Instruction*	_irDecoded;
+	debug_level		_debug;
+	FILE*			_debug_file;
 };

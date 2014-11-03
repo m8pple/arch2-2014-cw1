@@ -10,7 +10,7 @@ int main(int argc, char *argv[])
         srcName=argv[1];
     }
     
-    mips_mem_h m=mips_mem_create_ram(0x20000, 4);
+    mips_mem_h m=mips_mem_create_ram(0x200000, 4);
     mips_cpu_h c=mips_cpu_create(m);
     
     FILE *src=fopen(srcName,"rb");
@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     
     // No error checking... oh my!
     
-    uint32_t n=12;  // Value we will calculate fibonacci of
+    uint32_t n=3;  // Value we will calculate fibonacci of
     
     uint32_t sentinelPC=0x10000000;
     
@@ -42,16 +42,18 @@ int main(int argc, char *argv[])
     mips_cpu_set_register(c, 4, n);             // Set input argument
     mips_cpu_set_register(c, 29, 0x1000);       // Create a stack pointer
     
-    uint32_t steps=0;
-    while(!mips_cpu_step(c)){
+	uint32_t steps=0;
+	uint32_t pc;
+	mips_error e = mips_Success;
+    while( !e && pc!=sentinelPC ){
+		e = mips_cpu_step(c);
         fprintf(stderr, "Step %d.\n", steps);
         ++steps;
-        uint32_t pc;
         mips_cpu_get_pc(c, &pc);
-        if(pc==sentinelPC)
-            break;
+        if(e)
+			fprintf(stderr, "Exception %X\n", (unsigned)e);
     }
-    
+	
     uint32_t fib_n;
     mips_cpu_get_register(c, 2, &fib_n);    // Get the result back
     

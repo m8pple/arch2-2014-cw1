@@ -16,62 +16,67 @@ mips_cpu_h mips_cpu_create(mips_mem_h mem){
 }
 
 mips_error mips_cpu_reset(mips_cpu_h cpu){
-	mips_error ret = mips_Success;
 	try{
 		cpu->reset();
-	} catch(mips_error ret){};
-	
-	return ret;
+		return mips_Success;
+	} catch(mips_error  e){
+		return e;
+	}
 }
 
 mips_error mips_cpu_get_register(mips_cpu_h cpu, unsigned idx, uint32_t *oVal){
-	mips_error ret = mips_Success;
 	try{
 		*oVal = cpu->r[idx].value();
-	} catch(mips_error ret){};
-	
-	return ret;
+		return mips_Success;
+	} catch(mips_error  e){
+		return e;
+	}
 }
 
 mips_error mips_cpu_set_register(mips_cpu_h cpu, unsigned idx, uint32_t iVal){
-	mips_error ret = mips_Success;
 	try{
 		cpu->r[idx].value(iVal);
-	} catch (mips_error ret){};
-	
-	return ret;
+		return mips_Success;
+	} catch (mips_error e){
+		return e;
+	}
 }
 
 mips_error mips_cpu_set_pc(mips_cpu_h cpu, uint32_t iVal){
-	mips_error ret = mips_Success;
 	try{
 		cpu->internal_pc_set(iVal);
-	} catch(mips_error ret){};
-	
-	return ret;
+		return mips_Success;
+	} catch(mips_error  e){
+		return e;
+	}
 }
 
 mips_error mips_cpu_get_pc(mips_cpu_h cpu, uint32_t *oVal){
-	mips_error ret = mips_Success;
 	try{
 		*oVal = cpu->pc();
-	} catch(mips_error ret){};
-	
-	return ret;
+		return mips_Success;
+	} catch(mips_error  e){
+		return e;
+	}
 }
 
 mips_error mips_cpu_step(mips_cpu_h cpu){
-	mips_error ret = mips_Success;
 	try{
 		cpu->step();
+		return mips_Success;
 	}
-	catch(mips_error ret){};
-	
-	return ret;
+	catch(mips_error e){
+		return e;
+	}
 }
 
 mips_error mips_cpu_set_debug_level(mips_cpu_h cpu, unsigned level, FILE *dest){
-	return mips_ErrorNotImplemented;
+	try{
+		cpu->setDebug(dest, (debug_level)level);
+		return mips_Success;
+	} catch(mips_error e){
+		return e;
+	}
 }
 
 void mips_cpu_free(mips_cpu_h cpu){
