@@ -188,8 +188,8 @@ hilo mips_alu::alu_divide(uint32_t*, const uint32_t* a, const uint32_t* b){
 		return {};
 	else
 		return {
-			(uint32_t)( ((signed)*a) / ((signed)*b) ),
-			(uint32_t)( ((signed)*a) % ((signed)*b) )
+			(uint32_t)( ((signed)*a) % ((signed)*b) ),
+			(uint32_t)( ((signed)*a) / ((signed)*b) )
 		};
 }
 hilo mips_alu::alu_divideu(uint32_t*, const uint32_t* a, const uint32_t* b){
@@ -197,8 +197,8 @@ hilo mips_alu::alu_divideu(uint32_t*, const uint32_t* a, const uint32_t* b){
 		return {};
 	else
 		return {
-			(uint32_t)( *a / *b ),
-			(uint32_t)( *a % *b )
+			(uint32_t)( *a % *b ),
+			(uint32_t)( *a / *b )
 		};
 }
 hilo mips_alu::alu_or(uint32_t* out, const uint32_t* a, const uint32_t* b){
@@ -344,7 +344,6 @@ uint32_t mips_cpu::pc(void) const{
 
 void mips_cpu::fetchInstr(){
 	fprintf(_debug_file, "Fetching instruction...\n");
-	//fprintf(_debug_file, "Fetching instruction...\n");
 	uint32_t word = readWord(pc());
 	_ir.internal_set(word);
 	fprintf(_debug_file, "Fetched 0x%X.\n", word);
@@ -360,17 +359,20 @@ void mips_cpu::match(Instruction& ir, unsigned i){
 void mips_cpu::decode(){
 	if( _debug > ERROR )
 		fprintf(_debug_file, "Decoding...\n");
-	
+
+						//Loaded instruction
 	Instruction *ir = new Instruction(_ir.value());
+	mips_instr cand;	//Candidate instruction
 	
 	for(unsigned i=0; i<NUM_INSTR; ++i){
 		//For each matching opcode, determine if the loaded instruction
 		//	matches that expected format.
+		cand = mipsInstruction[i];
 		
-		if( mipsInstruction[i].opco == ir->opcode() ){
-			switch( mipsInstruction[i].type ){
+		if( cand.opco == ir->opcode() ){
+			switch( cand.type ){
 				case RType:
-					if( (const uint32_t)mipsInstruction[i].func == ir->function()
+					if( (const uint32_t)cand.func == ir->function()
 					   //Strictly following spec, shift field should be '00000'b
 					   //	unless shift instr, in which case rs should be '00000'b.
 					   && ( ir->shift() == 0
@@ -395,8 +397,8 @@ void mips_cpu::decode(){
 						break;
 
 				case IType:
-					if( (	mipsInstruction[i].func == FIELD_NOT_EXIST
-						 || (const uint32_t)mipsInstruction[i].func == ir->regT() )
+					if(	( cand.func == FIELD_NOT_EXIST
+						|| (const uint32_t)cand.func == ir->regT() )
 					   
 					   //Load upper immediate should have zero rs
 					   && (	(ir->mnemonic() != LUI)
@@ -409,7 +411,7 @@ void mips_cpu::decode(){
 						break;
 
 				case JType:
-					if( mipsInstruction[i].func == FIELD_NOT_EXIST ){
+					if( cand.func == FIELD_NOT_EXIST ){
 						match(*ir, i);
 						return;
 					}
