@@ -36,7 +36,68 @@ int main(){
     mips_mem_free(mem);
 	return 0;
 }
-                       
+
+uint32_t chooseValue32(void){
+	switch( rand()&0x7 ){
+		case 1:
+			return 0x0;
+		case 2:
+			return 0xFFFFFFFF;
+		case 3:
+			return 0x1;
+		case 4:
+			return 0xFFFFFFFE;
+		case 5:
+			return INT_MIN+1;
+		case 6:
+			return INT_MAX;
+		case 7:
+			return 0x76543210;
+		default:
+			return rand()&0xFFFFFFFF;
+	}
+}
+uint32_t chooseValue16(void){
+	switch( rand()&0x7 ){
+		case 1:
+			return 0x0;
+		case 2:
+			return 0xFFFF;
+		case 3:
+			return 0x1;
+		case 4:
+			return 0xFFFE;
+		case 5:
+			return 0x8000;
+		case 6:
+			return 0x0123;
+		case 7:
+			return 0x7654;
+		default:
+			return rand()&0xFFFF;
+	}
+}
+uint32_t chooseValue8(void){
+	switch( rand()&0x7 ){
+		case 1:
+			return 0x0;
+		case 2:
+			return 0xFF;
+		case 3:
+			return 0x1;
+		case 4:
+			return 0xFE;
+		case 5:
+			return 0x80;
+		case 6:
+			return 0x01;
+		case 7:
+			return 0x76;
+		default:
+			return rand()&0xFF;
+	}
+}
+
 void runTest(testResult(*test)(mips_cpu_h, mips_mem_h),
              mips_cpu_h cpu, mips_mem_h mem, unsigned runs){
 
@@ -53,74 +114,163 @@ void runTest(testResult(*test)(mips_cpu_h, mips_mem_h),
 testResult registerReset(mips_cpu_h cpu, mips_mem_h){
     uint32_t got;
     int correct, i=0;
+	mips_error e = mips_Success;
     
     try{
-		for(unsigned i=0; i<MIPS_NUM_REG; ++i)
-			mips_cpu_set_register(cpu, i, rand());
-		mips_cpu_set_pc(cpu, rand());
+		for(unsigned i=0; i<MIPS_NUM_REG && !e; ++i)
+			e = mips_cpu_set_register(cpu, i, chooseValue32());
 		
-		mips_cpu_reset(cpu);
+		if(e){
+			std::cout << "Error " << e << " accessing registers." << std::endl;
+			return registerReturn();
+		}
+		
+		e = mips_cpu_set_pc(cpu, chooseValue32());
+		
+		if(e){
+			std::cout << "Error " << e << " accessing registers." << std::endl;
+			return registerReturn();
+		}
+		
+		e = mips_cpu_reset(cpu);
+		
+		if(e){
+			std::cout << "Error " << e << " accessing registers." << std::endl;
+			return registerReturn();
+		}
 
-		mips_cpu_get_pc(cpu, &got);
+		e = mips_cpu_get_pc(cpu, &got);
+		
+		if(e){
+			std::cout << "Error " << e << " accessing registers." << std::endl;
+			return registerReturn();
+		}
+		
         correct = (got==0) ? 1 : 0;
 		
-		i=1;
-        for(; i<32 && correct; i++){
-            mips_cpu_get_register(cpu, i-1, &got);
-            correct |= (got==0);
+        for(i=1; i<32 && correct; i++){
+            e = mips_cpu_get_register(cpu, i-1, &got);
+            correct |= (got==0) && !e;
         }
-    } catch(mips_error e) {
+		
+		if(e){
+			std::cout << "Error " << e << " accessing registers." << std::endl;
+			return registerReturn();
+		}
+
+	} catch(...) {
         correct = 0;
-		std::cout << "Error " << e << " accessing registers." << std::endl;
+		std::cout << "Error: Uncaught exception accessing registers." << std::endl;
     }
-	
+
 	if(!correct)
 		std::cout << ((i==0)? "PC" : "GP reg") << " not zeroed" << std::endl;
-    
-    return {"<INTERNAL>", "Check all registers zeroed after reset.", correct};
+	
+	return registerReturn(correct);
 }
 
+testResult memoryReturn(int correct=0){
+	return {"<INTERNAL>", "Check can read same value back after write.", correct};
+}
 testResult memoryIO(mips_cpu_h, mips_mem_h mem){
 	int correct = 1;
+	mips_error e = mips_Success;
 	
 	try{
 		uint8_t ibuf[4] = {
-			(uint8_t)rand(),
-			(uint8_t)rand(),
-			(uint8_t)rand(),
-			(uint8_t)rand()
+			(uint8_t)chooseValue8(),
+			(uint8_t)chooseValue8(),
+			(uint8_t)chooseValue8(),
+			(uint8_t)chooseValue8()
 		};
-		mips_mem_write(mem, 0x0, 4, ibuf);
+		e = mips_mem_write(mem, 0x0, 4, ibuf);
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return memoryReturn();
+		}
 		
 		uint8_t obuf[4];
-		mips_mem_read(mem, 0x0, 4, obuf);
+		e = mips_mem_read(mem, 0x0, 4, obuf);
+		
+		if(e){
+			std::cout << "Error " << e << " reading from memory." << std::endl;
+			return memoryReturn();
+		}
 		
 		for(unsigned i=0; i<4; ++i)
 			correct &= obuf[i]==ibuf[i] ? 1 : 0;
 	
 	} catch(mips_error e) {
 		correct = 0;
-		std::cout << "Error " << e << "reading from/writing to memory." << std::endl;
+		std::cout << "Error: uncaught exception reading/writing memory." << std::endl;
 	}
-	return {"<INTERNAL>", "Check can read same value back after write.", correct};
+	
+	return memoryReturn(correct);
 }
 
+testResult constReturn(int correct=0){
+	return {"<INTERNAL>", "Check input registers unchanged after AND-ing.", correct};
+}
 testResult constInputs(mips_cpu_h cpu, mips_mem_h mem){
 	int correct = 1;
-	mips_mem_write(mem, 0x0, 4, Instruction(AND, 1, 2, 3, 0).bufferedVal());
+	mips_error e = mips_Success;
 	
 	try{
-		uint32_t ir1 = rand();
-		uint32_t ir2 = rand();
-		mips_cpu_reset(cpu);
-		mips_cpu_set_register(cpu, 1, ir1);
-		mips_cpu_set_register(cpu, 2, ir2);
-
-		mips_cpu_step(cpu);
+		e = mips_mem_write(mem, 0x0, 4, Instruction(AND, 1, 2, 3, 0).bufferedVal());
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return constReturn();
+		}
+		
+		uint32_t ir1 = chooseValue32();
+		uint32_t ir2 = chooseValue32();
+		
+		e = mips_cpu_reset(cpu);
+		
+		if(e){
+			std::cout << "Error " << e << " resetting CPU" << std::endl;
+			return constReturn();
+		}
+		
+		e = mips_cpu_set_register(cpu, 1, ir1);
+		
+		if(e){
+			std::cout << "Error " << e << " setting register" << std::endl;
+			return constReturn();
+		}
+		
+		e = mips_cpu_set_register(cpu, 2, ir2);
+		
+		if(e){
+			std::cout << "Error " << e << " setting register" << std::endl;
+			return constReturn();
+		}
+		
+		e = mips_cpu_step(cpu);
+		
+		
+		if(e){
+			std::cout << "Error " << e << " stepping CPU" << std::endl;
+			return constReturn();
+		}
 		
 		uint32_t or1,or2;
-		mips_cpu_get_register(cpu, 1, &or1);
-		mips_cpu_get_register(cpu, 2, &or2);
+		e = mips_cpu_get_register(cpu, 1, &or1);
+		
+		if(e){
+			std::cout << "Error " << e << " getting register" << std::endl;
+			return constReturn();
+		}
+		
+		e = mips_cpu_get_register(cpu, 2, &or2);
+		
+		if(e){
+			std::cout << "Error " << e << " getting register" << std::endl;
+			return constReturn();
+		}
+		
 		correct = (or1==ir1) && (or2==ir2);
 		
 		if(!correct){
@@ -128,339 +278,595 @@ testResult constInputs(mips_cpu_h cpu, mips_mem_h mem){
 			std::cout << "--------------------To: 0x" << or1 << ", 0x" << or2 << std::endl;
 		}
 		
-	} catch(mips_error e){
+	} catch(...){
 		correct = 0;
-		std::cout << "Error (" << e << ") performing AND." << std::endl;
+		std::cout << "Error: uncaught exception performing AND." << std::endl;
 	}
-	return {"<INTERNAL>", "Check input registers unchanged after AND-ing.", correct};
+	
+	return constReturn(correct);
 }
 
+testResult nopReturn(int correct=0){
+	return {"<INTERNAL>", "Check only PC changes after NOP.", correct};
+}
 testResult noOperation(mips_cpu_h cpu, mips_mem_h mem){
 	int correct = 1;
-	mips_mem_write(mem, 0x0, 4, Instruction(SLL, 0, 0, 0, 0).bufferedVal());
+	mips_error e = mips_Success;
 	
 	try{
-		mips_cpu_reset(cpu);
-		mips_cpu_step(cpu);
+		e = mips_mem_write(mem, 0x0, 4, Instruction(SLL, 0, 0, 0, 0).bufferedVal());
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return nopReturn();
+		}
+		
+		e = mips_cpu_reset(cpu);
+		
+		if(e){
+			std::cout << "Error " << e << " resetting CPU." << std::endl;
+			return nopReturn();
+		}
+		
+		e = mips_cpu_step(cpu);
+		
+		if(e){
+			std::cout << "Error " << e << " stepping CPU." << std::endl;
+			return nopReturn();
+		}
 		
 		uint32_t r[MIPS_NUM_REG];
 		unsigned i;
-		for(i=0; i<MIPS_NUM_REG; ++i){
-			mips_cpu_get_register(cpu, i, &r[i]);
-			correct &= ~r[i];
-			if(!correct)
-				break;	//to keep idx of non-zero reg
+		for(i=0; (i<MIPS_NUM_REG) && correct; ++i){
+			e = mips_cpu_get_register(cpu, i, &r[i]);
+			correct &= !e ? ~r[i] : 0;
+		}
+		
+		if(e){
+			std::cout << "Error " << e << " getting register." << std::endl;
+			return nopReturn();
 		}
 		
 		if(!correct)
 			std::cout << "GP reg " << i << " got set during NOP." << std::endl;
 		
-	} catch(mips_error e){
+	} catch(...){
 		correct = 0;
-		std::cout << "Error (" << e << ") performing NOP (SLL 0)." << std::endl;
+		std::cout << "Error: uncaught exception performing NOP (SLL 0)." << std::endl;
 	}
-	return {"<INTERNAL>", "Check only PC changes after NOP.", correct};
+	
+	return nopReturn(correct);
 }
 
-testResult RTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncR verfunc){
-	int correct = -1;
-	uint32_t r1= rand(), r2=rand(), r3, exp;
-	uint8_t shift= rand()&(MASK_SHFT>>POS_SHFT);
-	
-	try{
-		
-		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, 3, shift).bufferedVal());
-		
-		mips_cpu_reset(cpu);
-		mips_cpu_set_register(cpu, 1, r1);
-		mips_cpu_set_register(cpu, 2, r2);
-
-		mips_cpu_step(cpu);
-		
-		mips_cpu_get_register(cpu, 3, &r3);
-		
-	} catch(mips_error e) {
-		try{
-			exp = verfunc(r1, r2, shift);
-			correct = 0;		//Simulator threw exception, shouldn't have.
-			std::cout << "Incorrect result." << std::endl;
-			std::cout << "Result was: Exception " << e << std::endl;
-			std::cout << "--Expected: 0x" << exp << std::endl;
-		} catch(mips_error v){
-			if( v == e )
-				correct = 1;	//Correct exception
-			else{
-				correct = 0;	//Exception, but the wrong one!
-				std::cout << "Incorrect result." << std::endl;
-				std::cout << "Result was: Exception " << e << std::endl;
-				std::cout << "--Expected: Exception " << v << std::endl;
-			}
-		}
-	}
-	if(correct == -1){
-		try{
-			exp = verfunc(r1, r2, shift);
-			if( r3 == exp )
-				correct = 1;	//No exception, correct result
-			else{
-				correct = 0;	//Incorrect result.
-				std::cout << "Incorrect result." << std::endl;
-				std::cout << "Result was: 0x" << r3 << std::endl;
-				std::cout << "--Expected: 0x" << exp << std::endl;
-			}
-		} catch(mips_error v){
-			correct = 0;		//No exception, should have
-			std::cout << "Incorrect result." << std::endl;
-			std::cout << "Result was: 0x" << r3 << std::endl;
-			std::cout << "--Expected: Exception " << v << std::endl;
-		}
-	}
-	else;
-	
+testResult result(mips_asm mnemonic, int correct=0){
 	std::string desc = "Check result of ";
 	desc += mipsInstruction[mnemonic].mnem;
 	desc += "-ing.";
 	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
 }
+testResult RTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncR verfunc){
+	
+	mips_error e = mips_Success, gotE;
+	uint32_t r1 = chooseValue32(), r2 = chooseValue32(), r3, exp;
+	
+	try{
+		e = mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, 3, 0).bufferedVal());
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_reset(cpu);
+		
+		if(e){
+			std::cout << "Error " << e << " resetting CPU." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_set_register(cpu, 1, r1);
+		
+		if(e){
+			std::cout << "Error " << e << " setting register." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_set_register(cpu, 2, r2);
+		
+		if(e){
+			std::cout << "Error " << e << " setting register." << std::endl;
+			return result(mnemonic);
+		}
+
+		gotE = mips_cpu_step(cpu);
+		
+		e = mips_cpu_get_register(cpu, 3, &r3);
+		
+		if(e){
+			std::cout << "Error " << e << " getting register." << std::endl;
+			return result(mnemonic);
+		}
+		
+	} catch(...) {
+		std::cout << "Error: uncaught exception performing " << mipsInstruction[mnemonic].mnem << std::endl;
+		return result(mnemonic);
+	}
+	
+	try{
+		exp = verfunc(r1, r2, 0);
+		if( gotE ){
+			//Simulator threw exception, shouldn't have.
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: Exception " << gotE << std::endl;
+			std::cout << "--Expected: 0x" << exp << std::endl;
+			return result(mnemonic);
+		}
+		else if( exp == r3 ){
+			//Correct result
+			return result(mnemonic, 1);
+		}
+		else{
+			//Incorrect result
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: 0x" << r3 << std::endl;
+			std::cout << "--Expected: 0x" << exp << std::endl;
+			return result(mnemonic);
+		}
+	} catch(mips_error expE){
+		if( expE == gotE ){
+			//Correct exception
+			return result(mnemonic, 1);
+		}
+		else if( gotE ){
+			//Exception, but the wrong one!
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: Exception " << gotE << std::endl;
+			std::cout << "--Expected: Exception " << expE << std::endl;
+			return result(mnemonic);
+		}
+		else{
+			//No exception, should have
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: 0x" << r3 << std::endl;
+			std::cout << "--Expected: Exception " << expE << std::endl;
+			return result(mnemonic);
+		}
+	}
+}
 
 testResult ITypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncI verfunc){
-	int correct = 1;
+	
+	mips_error e = mips_Success, gotE;
 	uint32_t r1, r2, exp;
 	uint16_t imm;
 	
 	try{
-		r1 = mnemonic==LUI ? 0 : rand();
-		imm= rand();
+		r1 = mnemonic==LUI ? 0 : chooseValue32();
+		imm= chooseValue16();
 		
-		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, imm).bufferedVal());
+		e = mips_cpu_reset(cpu);
 		
-		mips_cpu_set_register(cpu, 1, r1);
-		
-		mips_cpu_set_pc(cpu, 0);
-		mips_cpu_step(cpu);
-		
-		mips_cpu_get_register(cpu, 2, &r2);
-	
-	} catch(mips_error e) {
-		try{
-			exp = verfunc(r1, imm);
-			correct = 0;		//Simulator threw exception, shouldn't have.
-			std::cout << "Incorrect result." << std::endl;
-			std::cout << "Result was: Exception " << e << std::endl;
-			std::cout << "--Expected: 0x" << exp << std::endl;
-		} catch(mips_error v){
-			if( v == e )
-				correct = 1;	//Correct exception
-			else{
-				correct = 0;	//Exception, but the wrong one!
-				std::cout << "Incorrect result." << std::endl;
-				std::cout << "Result was: Exception " << e << std::endl;
-				std::cout << "--Expected: Exception " << v << std::endl;
-			}
+		if(e){
+			std::cout << "Error " << e << " resetting CPU." << std::endl;
+			return result(mnemonic);
 		}
-	}
-	if(correct == -1){
-		try{
-			exp = verfunc(r1, imm);
-			if( r2 == exp )
-				correct = 1;	//No exception, correct result
-			else{
-				correct = 0;	//Incorrect result.
-				std::cout << "Incorrect result." << std::endl;
-				std::cout << "Result was: 0x" << r2 << std::endl;
-				std::cout << "--Expected: 0x" << exp << std::endl;
-			}
-		} catch(mips_error v){
-			correct = 0;		//No exception, should have
-			std::cout << "Incorrect result." << std::endl;
-			std::cout << "Result was: 0x" << r2 << std::endl;
-			std::cout << "--Expected: Exception " << v << std::endl;
+		
+		e = mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, imm).bufferedVal());
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return result(mnemonic);
 		}
+		
+		e = mips_cpu_set_register(cpu, 1, r1);
+		
+		if(e){
+			std::cout << "Error " << e << " setting register." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_set_pc(cpu, 0);
+		
+		if(e){
+			std::cout << "Error " << e << " setting PC." << std::endl;
+			return result(mnemonic);
+		}
+		
+		gotE = mips_cpu_step(cpu);
+		
+		e = mips_cpu_get_register(cpu, 2, &r2);
+		
+		if(e){
+			std::cout << "Error " << e << " getting register." << std::endl;
+			return result(mnemonic);
+		}
+
+	} catch(...) {
+		std::cout << "Error: uncaught exception performing " << mipsInstruction[mnemonic].mnem << std::endl;
+		return result(mnemonic);
 	}
-	else;
-	
-	std::string desc = "Check result of ";
-	desc += mipsInstruction[mnemonic].mnem;
-	desc += "-ing.";
-	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
-}
-/* Includes JR, which is RType, but easier to test with J,JAL */
-testResult JTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncJ verfunc){
-	int correct = -1;
-	uint32_t pcInit;
 	
 	try{
-		uint32_t index = rand()&0x03FFFFFC;	//26 bits, aligned
-		mips_cpu_reset(cpu);
+		exp = verfunc(r1, imm);
+		if( gotE ){
+			//Simulator threw exception, shouldn't have.
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: Exception " << gotE << std::endl;
+			std::cout << "--Expected: 0x" << exp << std::endl;
+			return result(mnemonic);
+		}
+		else if( exp == r2 ){
+			//Correct result
+			return result(mnemonic, 1);
+		}
+		else{
+			//Incorrect result
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: 0x" << r2 << std::endl;
+			std::cout << "--Expected: 0x" << exp << std::endl;
+			return result(mnemonic);
+		}
+	} catch(mips_error expE){
+		if( expE == gotE ){
+			//Correct exception
+			return result(mnemonic, 1);
+		}
+		else if( gotE ){
+			//Exception, but the wrong one!
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: Exception " << gotE << std::endl;
+			std::cout << "--Expected: Exception " << expE << std::endl;
+			return result(mnemonic);
+		}
+		else{
+			//No exception, should have
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: 0x" << r2 << std::endl;
+			std::cout << "--Expected: Exception " << expE << std::endl;
+			return result(mnemonic);
+		}
+	}
+}
 
-		try{
-			pcInit= rand()&0x0000FFFC;		//seems reasonable
-			if(mnemonic == JR){
-				mips_cpu_set_register(cpu, 1, index);
-				mips_mem_write(mem, pcInit, 4, Instruction(mnemonic, 1, 0,0,0).bufferedVal());
-			}
-			else
-				mips_mem_write(mem, pcInit, 4, Instruction(mnemonic, index).bufferedVal());
-			
-			//Make sure not a J/B instruction in the delay slot (UB)
-			uint8_t tmp[4]={0};
-			mips_mem_write(mem, pcInit+4, 4, tmp);
-			
-		} catch(mips_error e){
-			if(e == mips_ExceptionInvalidAddress){
-				pcInit = 0;					//just in case..
-				mips_mem_write(mem, pcInit, 4, Instruction(mnemonic, index).bufferedVal());
-				
-				//Make sure not a J/B instruction in the delay slot (UB)
-				uint8_t tmp[4]={0};
-				mips_mem_write(mem, pcInit+4, 4, tmp);
-			}
-			else
-				throw e;					//ouch
+/* Includes JR, which is RType, but easier to test with J,JAL */
+testResult JTypeResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncJ verfunc){
+	
+	int correct;
+	mips_error e = mips_Success, gotE;
+	uint32_t pcInit= rand()&0x30000000;
+	uint32_t index = rand()&0x03FFFFFC;	//26 bits, aligned
+
+	try{		
+		e = mips_cpu_reset(cpu);
+		
+		if(e){
+			std::cout << "Error " << e << " resetting CPU." << std::endl;
+			return result(mnemonic);
 		}
 
-		mips_cpu_set_pc(cpu, pcInit);
+		if(mnemonic == JR){
+			e = mips_cpu_set_register(cpu, 1, index);
+			
+			if(e){
+				std::cout << "Error " << e << " setting register." << std::endl;
+				return result(mnemonic);
+			}
+			
+			e = mips_mem_write(mem, pcInit, 4, Instruction(mnemonic, 1, 0,0,0).bufferedVal());
+			
+			if(e){
+				std::cout << "Error " << e << " writing to memory." << std::endl;
+				return result(mnemonic);
+			}
+		}
+		else{
+			e = mips_mem_write(mem, pcInit, 4, Instruction(mnemonic, index).bufferedVal());
+			
+			if(e){
+				std::cout << "Error " << e << " writing to memory." << std::endl;
+				return result(mnemonic);
+			}
+		}
+		
+		//Make sure not a J/B instruction in the delay slot (UB)
+		uint8_t tmp[4]={0};
+		e = mips_mem_write(mem, pcInit+4, 4, tmp);
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return result(mnemonic);
+		}
+
+		e = mips_cpu_set_pc(cpu, pcInit);
+		
+		if(e){
+			std::cout << "Error " << e << " setting PC." << std::endl;
+			return result(mnemonic);
+		}
 		
 		uint32_t after1, after2;
-		mips_cpu_step(cpu);
-		mips_cpu_get_pc(cpu, &after1);
+		gotE = mips_cpu_step(cpu);
+		
+		e = mips_cpu_get_pc(cpu, &after1);
+		
+		if(e){
+			std::cout << "Error " << e << " getting PC." << std::endl;
+			return result(mnemonic);
+		}
 		
 		correct = (after1 == pcInit+4);
 		
-		if(correct == 0){
-			std::cout << "Incorrect PC." << std::endl;
+		if( !correct ){
+			std::cout << "Error: Incorrect PC." << std::endl;
 			std::cout << "---PC at: 0x" << after1 << " during branch delay slot;" << std::endl;
 			std::cout << "Expected: 0x" << pcInit+4 << std::endl;
-			goto END_TEST;	//egh.. sorry
+			return result(mnemonic);
 		}
 		
-		mips_cpu_step(cpu);
-		mips_cpu_get_pc(cpu, &after2);
+		e = mips_cpu_step(cpu);
+		
+		if(e){
+			std::cout << "Error: Unexpected exception " << e << " performing branch." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_get_pc(cpu, &after2);
+		
+		if(e){
+			std::cout << "Error " << e << " getting PC." << std::endl;
+			return result(mnemonic);
+		}
 		
 		uint32_t exp = verfunc(pcInit, index);
 		correct = (after2 == exp);
 		
-		if(correct == 0){
-			std::cout << "Incorrect jump." << std::endl;
+		if( !correct ){
+			std::cout << "Error: Incorrect jump." << std::endl;
 			std::cout << "Result was: 0x" << after2 << std::endl;
 			std::cout << "--Expected: 0x" << exp << std::endl;
-		} else if( mnemonic == JAL ){
+		}
+		else if( mnemonic == JAL ){
 			uint32_t r31;
-			mips_cpu_get_register(cpu, 31, &r31);
+			e = mips_cpu_get_register(cpu, 31, &r31);
+			
+			if(e){
+				std::cout << "Error " << e << " getting register." << std::endl;
+				return result(mnemonic);
+			}
+			
 			correct = (r31 == pcInit+8);
 			
-			if(correct == 0){
-				std::cout << "Incorrect link." << std::endl;
+			if( !correct ){
+				std::cout << "Error: Incorrect link." << std::endl;
 				std::cout << "Link register was: 0x" << r31 << std::endl;
 				std::cout << "---------Expected: 0x" << pcInit+8 << std::endl;
 			}
 		}
-		
-	} catch(mips_error e){
-		correct = 0;
-		std::cout << "Error performing branch: " << e << std::endl;
-	};
-
-END_TEST:
-	std::string desc = "Check result of ";
-	desc += mipsInstruction[mnemonic].mnem;
-	desc += "-ing.";
-	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
+	}
+	catch(...){
+		std::cout << "Error: Uncaught exception performing branch: " << e << std::endl;
+		return result(mnemonic);
+	}
+	return result(mnemonic, correct);
 }
 
-
 testResult branchResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncB verfunc){
+	
+	mips_error e = mips_Success;
 	int correct = -1;
 	
 	try{
-		int16_t trgtOffset = rand();
-		uint32_t r1 = rand(), r2 = rand()%2 ? r1 : rand();
+		int16_t trgtOffset = chooseValue16();
+		uint32_t r1 = chooseValue32(), r2 = rand()%2 ? r1 : chooseValue32();
 		
-		mips_cpu_reset(cpu);
+		e = mips_cpu_reset(cpu);
+		
+		if(e){
+			std::cout << "Error " << e << " resetting CPU." << std::endl;
+			return result(mnemonic);
+		}
+		
+		/* Write instructions in appropriate format */
 		if(mnemonic == BEQ || mnemonic == BNE){
-			mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, trgtOffset).bufferedVal());
+			e = mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, trgtOffset).bufferedVal());
+			
+			if(e){
+				std::cout << "Error " << e << " writing to memory." << std::endl;
+				return result(mnemonic);
+			}
 			
 			//Make sure not a J/B instruction in the delay slot (UB)
 			uint8_t tmp[4]={0};
-			mips_mem_write(mem, 0x4, 4, tmp);
+			e = mips_mem_write(mem, 0x4, 4, tmp);
+			
+			if(e){
+				std::cout << "Error " << e << " writing to memory." << std::endl;
+				return result(mnemonic);
+			}
 		}
 		else{
-			mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, trgtOffset).bufferedVal());
+			e = mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, trgtOffset).bufferedVal());
+			
+			if(e){
+				std::cout << "Error " << e << " writing to memory." << std::endl;
+				return result(mnemonic);
+			}
 			
 			//Make sure not a J/B instruction in the delay slot (UB)
 			uint8_t tmp[4]={0};
-			mips_mem_write(mem, 0x4, 4, tmp);
+			e = mips_mem_write(mem, 0x4, 4, tmp);
+			
+			if(e){
+				std::cout << "Error " << e << " writing to memory." << std::endl;
+				return result(mnemonic);
+			}
 		}
-		mips_cpu_set_register(cpu, 1, r1);
-		mips_cpu_set_register(cpu, 2, r2);
+		e = mips_cpu_set_register(cpu, 1, r1);
+		
+		if(e){
+			std::cout << "Error " << e << " setting register." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_set_register(cpu, 2, r2);
+		
+		if(e){
+			std::cout << "Error " << e << " setting register." << std::endl;
+			return result(mnemonic);
+		}
 		
 		uint32_t after1, after2;
-		mips_cpu_step(cpu);
-		mips_cpu_get_pc(cpu, &after1);
+		e = mips_cpu_step(cpu);
+		
+		if(e){
+			std::cout << "Error: Unexpected exception " << e << " performing branch." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_get_pc(cpu, &after1);
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return result(mnemonic);
+		}
 		
 		correct = (after1 == 0x4);
 		
-		if(correct == 0){
-			std::cout << "Incorrect result." << std::endl;
+		if( !correct ){
+			std::cout << "Error: Incorrect result." << std::endl;
 			std::cout << "---PC at: 0x" << after1 << " during branch delay slot;" << std::endl;
 			std::cout << "Expected: 0x" << 4 << std::endl;
-			goto END_TEST;
+			return result(mnemonic);
 		}
 		
-		mips_cpu_step(cpu);
-		mips_cpu_get_pc(cpu, &after2);
+		e = mips_cpu_step(cpu);
+		
+		if(e){
+			std::cout << "Error: Unexpected exception " << e << " performing branch." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_get_pc(cpu, &after2);
+		
+		if(e){
+			std::cout << "Error " << e << " getting PC." << std::endl;
+			return result(mnemonic);
+		}
 		
 		uint32_t exp = verfunc(r1, r2, trgtOffset);
 		correct = (after1 == 0x4) && (after2 == exp);
 		
-		if(correct == 0){
-			std::cout << "Incorrect result." << std::endl;
+		if( !correct ){
+			std::cout << "Error: Incorrect result." << std::endl;
 			std::cout << "Branched to: 0x" << after2 << std::endl;
 			std::cout << "---Expected: 0x" << exp << std::endl;
-		} else if( (mnemonic == BGEZAL || mnemonic == BLTZAL) && exp != 0x8 ){
+		}
+		/* Test linking */
+		else if( (mnemonic == BGEZAL || mnemonic == BLTZAL) && exp != 0x8 ){
 			uint32_t r31;
-			mips_cpu_get_register(cpu, 31, &r31);
+			e = mips_cpu_get_register(cpu, 31, &r31);
+			
+			if(e){
+				std::cout << "Error " << e << " getting register." << std::endl;
+				return result(mnemonic);
+			}
+			
 			correct = (r31 == 0x8);
 			
-			if(correct == 0){
-				std::cout << "Incorrect result." << std::endl;
+			if( !correct ){
+				std::cout << "Error: Incorrect result." << std::endl;
 				std::cout << "Link register was: 0x" << r31 << std::endl;
 				std::cout << "---------Expected: 0x" << 0x8 << std::endl;
 			}
 		}
-
-	} catch(mips_error e){
-		correct = 0;
-		std::cout << "Error performing branch: " << e << std::endl;
 	}
-	
-END_TEST:
-	std::string desc = "Check result of ";
-	desc += mipsInstruction[mnemonic].mnem;
-	desc += "-ing.";
-	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
+	catch(mips_error e){
+		std::cout << "Error: Uncaught exception " << e << " performing branch." << std::endl;
+		return result(mnemonic);
+	}
+	return result(mnemonic, correct);
 }
 
 testResult hiloResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncHL verfunc){
+	
+	mips_error e = mips_Success;
 	int correct;
 	hilo exp;
 	try{
-		uint32_t r1 = rand(), r2 = rand();
+		uint32_t r1 = chooseValue32(), r2 = chooseValue32();
 
-		mips_cpu_reset(cpu);
-		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, 0, 0).bufferedVal());
-		mips_mem_write(mem, 0x4, 4, Instruction(MFLO, 0, 0, 3, 0).bufferedVal());
-		mips_mem_write(mem, 0x8, 4, Instruction(MFHI, 0, 0, 4, 0).bufferedVal());
-		mips_cpu_set_register(cpu, 1, r1);
-		mips_cpu_set_register(cpu, 2, r2);
+		e = mips_cpu_reset(cpu);
 		
-		mips_cpu_step(cpu);
-		mips_cpu_step(cpu);
-		mips_cpu_step(cpu);
+		if(e){
+			std::cout << "Error " << e << " resetting CPU." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, 0, 0).bufferedVal());
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_mem_write(mem, 0x4, 4, Instruction(MFLO, 0, 0, 3, 0).bufferedVal());
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_mem_write(mem, 0x8, 4, Instruction(MFHI, 0, 0, 4, 0).bufferedVal());
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_set_register(cpu, 1, r1);
+		
+		if(e){
+			std::cout << "Error " << e << " setting register." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_set_register(cpu, 2, r2);
+		
+		e = mips_cpu_step(cpu);
+		
+		if(e){
+			std::cout << "Error: Unexpected exception " << e << " executing instruction." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_step(cpu);
+		
+		if(e){
+			std::cout << "Error: Unexpected exception " << e << " executing instruction." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_step(cpu);
+		
+		if(e){
+			std::cout << "Error: Unexpected exception " << e << " executing instruction." << std::endl;
+			return result(mnemonic);
+		}
 		
 		hilo got;
-		mips_cpu_get_register(cpu, 3, &(got.lo));
-		mips_cpu_get_register(cpu, 4, &(got.hi));
+		e = mips_cpu_get_register(cpu, 3, &(got.lo));
+		
+		if(e){
+			std::cout << "Error " << e << " getting register." << std::endl;
+			return result(mnemonic);
+		}
+		
+		e = mips_cpu_get_register(cpu, 4, &(got.hi));
+		
+		if(e){
+			std::cout << "Error " << e << " getting register." << std::endl;
+			return result(mnemonic);
+		}
 		
 		try{
 			exp = verfunc(r1, r2);
@@ -470,34 +876,30 @@ testResult hiloResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyF
 			//Result is undefined, so whatever happened was 'correct'
 			correct = 1;
 		}
-		
-		
+
 		if(!correct){
-			std::cout << "Incorrect result." << std::endl;
+			std::cout << "Error: Incorrect result." << std::endl;
 			std::cout << "Result was: [0x" << got.hi << ", 0x" << got.lo << "]" << std::endl;
 			std::cout << "--Expected: [0x" << exp.hi << ", 0x" << exp.lo << "]" << std::endl;
 		}
 		
 	} catch(mips_error e){
 		correct = 0;
-		std::cout << "Error during operation: " << e << std::endl;
+		std::cout << "Error: Uncaught exception: " << e << std::endl;
 	}
-
-	std::string desc = "Check result of ";
-	desc += mipsInstruction[mnemonic].mnem;
-	desc += "-ing.";
-	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
+	return result(mnemonic, correct);
 }
 
 testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, verifyFuncLS verfunc){
-	int correct = -1;
+	
+	mips_error e = mips_Success, gotE;
 	
 	uint32_t rtInit = 0x00010203;
 	uint8_t idata[4] = {
-		(uint8_t)rand(),
-		(uint8_t)rand(),
-		(uint8_t)rand(),
-		(uint8_t)rand()
+		(uint8_t)chooseValue8(),
+		(uint8_t)chooseValue8(),
+		(uint8_t)chooseValue8(),
+		(uint8_t)chooseValue8()
 	};
 	uint8_t zero[4] = {0};
 	uint8_t align = 0;
@@ -509,123 +911,184 @@ testResult loadstoreResult(mips_cpu_h cpu, mips_mem_h mem, mips_asm mnemonic, ve
 		int16_t offset	= rand()<<2;	//align
 		uint32_t addr	= 0x100;		//avoid program memory
 		
-		if( mnemonic == LB || mnemonic == LBU || mnemonic == LWL || mnemonic == LWR
-		   /*|| mnemonic == SH*/ || mnemonic == SB){
-			//UNCOMMENT WHEN EXCEPTIONS WORK
+		if(   mnemonic == LB || mnemonic == LBU || mnemonic == LWL || mnemonic == LWR
+		   || mnemonic == SH || mnemonic == SB ){
 			
 			align+= rand()%4;
 			addr += align;				//mix up the alignment
 		}
-		
-		/* UNCOMMENT WHEN EXCEPTIONS WORK!
-		else if(mnemonic == LW || mnemonic == SW){
+		else if( mnemonic == LW || mnemonic == SW ){
 			
 			align+= rand()%2 ? 1 : 0;	//50% chance of being misaligned (test exception)
 			addr += align;
 		}
-		*/
 		
-		mips_cpu_reset(cpu);
+		e = mips_cpu_reset(cpu);
 
-		mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, offset).bufferedVal());
-		mips_cpu_set_register(cpu, 1, addr);
+		if(e){
+			std::cout << "Error " << e << " resetting CPU." << std::endl;
+			return result(mnemonic);
+		}
+
+		e = mips_mem_write(mem, 0x0, 4, Instruction(mnemonic, 1, 2, offset).bufferedVal());
+		
+		if(e){
+			std::cout << "Error " << e << " writing to memory." << std::endl;
+			return result(mnemonic);
+		}
+
+		e = mips_cpu_set_register(cpu, 1, addr);
+
+		if(e){
+			std::cout << "Error " << e << " setting register." << std::endl;
+			return result(mnemonic);
+		}
+
 		
 		if(mnemonic == LB || mnemonic == LBU ||
 		   mnemonic == LW || mnemonic == LWL || mnemonic == LWR){
 			//Initial value to test LWL/LWR leave half, and others clear
-			mips_cpu_set_register(cpu, 2, rtInit);
+			e = mips_cpu_set_register(cpu, 2, rtInit);
+
+			if(e){
+				std::cout << "Error " << e << " setting register." << std::endl;
+				return result(mnemonic);
+			}
 			
 			//Write a word, even if only testing a byte/half
-			mips_mem_write(mem, addr+offset-align, 4, idata);
-			//Zero around it
-			mips_mem_write(mem, addr+offset-align-4, 4, zero);
-			mips_mem_write(mem, addr+offset-align+4, 4, zero);
+			e = mips_mem_write(mem, addr+offset-align, 4, idata);
 
-			mips_cpu_step(cpu);
-			mips_cpu_get_register(cpu, 2, &odata);
+			if(e){
+				std::cout << "Error " << e << " writing to memory." << std::endl;
+				return result(mnemonic);
+			}
+
+			//Zero around it
+			e = mips_mem_write(mem, addr+offset-align-4, 4, zero);
+
+			if(e){
+				std::cout << "Error " << e << " writing to memory." << std::endl;
+				return result(mnemonic);
+			}
+
+			e = mips_mem_write(mem, addr+offset-align+4, 4, zero);
+
+			if(e){
+				std::cout << "Error " << e << " writing to memory." << std::endl;
+				return result(mnemonic);
+			}
+
+			gotE = mips_cpu_step(cpu);
+
+			e = mips_cpu_get_register(cpu, 2, &odata);
+
+			if(e){
+				std::cout << "Error " << e << " getting register." << std::endl;
+				return result(mnemonic);
+			}
 		}
 		else{
 			//Zero the address we want to test writing to
-			mips_mem_write(mem, addr+offset-align, 4, zero);
-			mips_cpu_set_register(cpu, 2, (idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3]));
-			
-			mips_cpu_step(cpu);
+			e = mips_mem_write(mem, addr+offset-align, 4, zero);
+
+			if(e){
+				std::cout << "Error " << e << " writing to memory." << std::endl;
+				return result(mnemonic);
+			}
+
+			e = mips_cpu_set_register(cpu, 2, (idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3]));
+
+			if(e){
+				std::cout << "Error " << e << " setting register." << std::endl;
+				return result(mnemonic);
+			}
+
+			gotE = mips_cpu_step(cpu);
 			
 			uint8_t t[4];
-			mips_mem_read(mem, addr+offset-align, 4, t);
+			e = mips_mem_read(mem, addr+offset-align, 4, t);
+
+			if(e){
+				std::cout << "Error " << e << " accessing memory." << std::endl;
+				return result(mnemonic);
+			}
+
 			odata = t[0]<<24|t[1]<<16|t[2]<<8|t[3];
 		}
+	} catch(...) {
+		std::cout << "Error: Uncaught exception performing " << mipsInstruction[mnemonic].mnem << std::endl;
+		return result(mnemonic);
+	}
 
-	} catch(mips_error e) {
-		try{
-			exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align, rtInit);
-			correct = 0;		//Simulator threw exception, shouldn't have.
-			std::cout << "Incorrect result." << std::endl;
-			std::cout << "Result was: Exception " << e << std::endl;
+	try{
+		exp = verfunc( idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align, rtInit );
+		if( gotE ){
+			//Simulator threw exception, shouldn't have.
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: Exception " << gotE << std::endl;
 			std::cout << "--Expected: 0x" << exp << std::endl;
-		} catch(mips_error v){
-			if( v == e )
-				correct = 1;	//Correct exception
-			else{
-				correct = 0;	//Exception, but the wrong one!
-				std::cout << "Incorrect result." << std::endl;
-				std::cout << "Result was: Exception " << e << std::endl;
-				std::cout << "--Expected: Exception " << v << std::endl;
-			}
+			return result(mnemonic);
 		}
-	}
-	if(correct == -1){
-		try{
-			exp = verfunc(idata[0]<<24|idata[1]<<16|idata[2]<<8|idata[3], align, rtInit);
-			if( odata == exp )
-				correct = 1;	//No exception, correct result
-			else{
-				correct = 0;	//Incorrect result.
-				std::cout << "Incorrect result." << std::endl;
-				std::cout << "Load/Stored: 0x" << odata << std::endl;
-				std::cout << "---Expected: 0x" << exp << std::endl;
-			}
-		} catch(mips_error v){
-			correct = 0;		//No exception, should have
-			std::cout << "Incorrect result." << std::endl;
+		else if( exp == odata ){
+			//Correct result
+			return result(mnemonic, 1);
+		}
+		else{
+			//Incorrect result
+			std::cout << "Error: Incorrect result." << std::endl;
 			std::cout << "Result was: 0x" << odata << std::endl;
-			std::cout << "--Expected: Exception " << v << std::endl;
+			std::cout << "--Expected: 0x" << exp << std::endl;
+			return result(mnemonic);
+		}
+	} catch(mips_error expE){
+		if( expE == gotE ){
+			//Correct exception
+			return result(mnemonic, 1);
+		}
+		else if( gotE ){
+			//Exception, but the wrong one!
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: Exception " << gotE << std::endl;
+			std::cout << "--Expected: Exception " << expE << std::endl;
+			return result(mnemonic);
+		}
+		else{
+			//No exception, should have
+			std::cout << "Error: Incorrect result." << std::endl;
+			std::cout << "Result was: 0x" << odata << std::endl;
+			std::cout << "--Expected: Exception " << expE << std::endl;
+			return result(mnemonic);
 		}
 	}
-	else;
-
-
-	std::string desc = "Check result of ";
-	desc += mipsInstruction[mnemonic].mnem;
-	desc += "-ing.";
-	return {mipsInstruction[mnemonic].mnem, desc.c_str(), correct};
 }
 
-
 uint32_t ADDverify(uint32_t r1, uint32_t r2, uint8_t){
-	int64_t p = (signed)r1+(signed)r2;
-	if((~(unsigned)p)&0xFFFFFFFF00000000)
+	if(((signed)r2>0 && (signed)r1>INT32_MAX-(signed)r2) ||
+	   ((signed)r2<0 && (signed)r1<INT32_MIN-(signed)r2))
 		throw mips_ExceptionArithmeticOverflow;
 	else
-		return p&0xFFFFFFFF;
+		return (signed)r1+(signed)r2;
 }
 testResult ADDResult(mips_cpu_h cpu, mips_mem_h mem){
 	return RTypeResult(cpu, mem, ADD, (verifyFuncR)ADDverify);
 }
 
 uint32_t ADDIverify(uint32_t r1, uint16_t i){
-	int64_t p = (signed)r1+(i&0x8000 ? 0xFFFF0000|i : i);
-	if((~p)&0xFFFFFFFF00000000)
+	int32_t imm = i&0x8000 ? (MASK_16b<<16)|i : i&MASK_16b;
+	if((imm>0 && (signed)r1>INT32_MAX-imm) ||
+	   (imm<0 && (signed)r1<INT32_MIN-imm))
 		throw mips_ExceptionArithmeticOverflow;
-	else
-		return p&0xFFFFFFFF;
+	else{
+		int32_t p = (signed)r1+imm;
+		return p;
+	}
 }
 testResult ADDIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, ADDI, (verifyFuncI)ADDIverify);
 }
 
 uint32_t ADDIUverify(uint32_t r1, uint16_t i){
-	return r1+i;
+	return i&0x8000 ? ((MASK_16b<<16)|i)+r1 : (i&MASK_16b)+r1;
 }
 testResult ADDIUResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, ADDIU, (verifyFuncI)ADDIUverify);
@@ -707,9 +1170,11 @@ uint32_t BNEverify(uint32_t r1, uint32_t r2, uint16_t offset){
 testResult BNEResult(mips_cpu_h cpu, mips_mem_h mem){
 	return branchResult(cpu, mem, BNE, (verifyFuncB)BNEverify);
 }
+
 /* (DIV|MULT)U? tests also implicitly test MFHI, MFLO */
 hilo DIVverify(uint32_t r1, uint32_t r2){
 	if(r2 == 0)
+		//Result is undefined
 		throw mips_InternalError;
 	else
 		return {
@@ -777,8 +1242,11 @@ testResult LUIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, LUI, (verifyFuncI)LUIverify);
 }
 
-uint32_t LWverify(uint32_t data, uint8_t, uint32_t){
-	return data;
+uint32_t LWverify(uint32_t data, uint8_t align, uint32_t){
+	if(align)
+		throw mips_ExceptionInvalidAlignment;
+	else
+		 return data;
 }
 testResult LWResult(mips_cpu_h cpu, mips_mem_h mem){
 	return loadstoreResult(cpu, mem, LW, LWverify);
@@ -852,11 +1320,11 @@ testResult SHResult(mips_cpu_h cpu, mips_mem_h mem){
 }
 
 uint32_t SUBverify(uint32_t r1, uint32_t r2, uint8_t){
-	int64_t p = (signed)r1-(signed)r2;
-	if((~(unsigned)p)&0xFFFFFFFF00000000)
+	if(((signed)r2>0 && (signed)r1<INT32_MIN+(signed)r2) ||
+	   ((signed)r2<0 && (signed)r1>INT32_MAX-(signed)r2))
 		throw mips_ExceptionArithmeticOverflow;
 	else
-		return p&0xFFFFFFFF;
+		return (uint32_t)((signed)r1-(signed)r2);
 }
 testResult SUBResult(mips_cpu_h cpu, mips_mem_h mem){
 	return RTypeResult(cpu, mem, SUB, (verifyFuncR)SUBverify);
@@ -891,14 +1359,19 @@ testResult SLTResult(mips_cpu_h cpu, mips_mem_h mem){
 }
 
 uint32_t SLTIverify(uint32_t r1, uint16_t imm){
-	return ((signed)r1<(signed)(0x00000000|imm)) ? 1 : 0;
+	return imm&0x8000
+			? (signed)r1<(signed)( imm|0xFFFF0000 ) ? 1 : 0
+			: (signed)r1<(signed)( imm|0x00000000 ) ? 1 : 0;
 }
 testResult SLTIResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, SLTI, (verifyFuncI)SLTIverify);
 }
 
 uint32_t SLTIUverify(uint32_t r1, uint16_t imm){
-	return (r1<(0x00000000|imm)) ? 1 : 0;
+	//Immediate is sign extended, but compared as unsigned
+	return imm&0x8000
+			? r1<( imm|0xFFFF0000 ) ? 1 : 0
+			: r1<( imm|0x00000000 ) ? 1 : 0;
 }
 testResult SLTIUResult(mips_cpu_h cpu, mips_mem_h mem){
 	return ITypeResult(cpu, mem, SLTIU, (verifyFuncI)SLTIUverify);
