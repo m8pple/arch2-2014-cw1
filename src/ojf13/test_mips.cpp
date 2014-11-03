@@ -273,7 +273,7 @@ testResult memoryIO(mips_cpu_h, mips_mem_h mem){
 testResult oorReturn(int correct=0){
 	return {"<INTERNAL>", "Check exception on stepping PC out of range.", correct};
 }
-testResult outOfRange(mips_cpu_h cpu, mips_mem_h mem){
+testResult outOfRange(mips_cpu_h cpu, mips_mem_h){
 	mips_error e = mips_Success, gotE;
 	
 	try{
