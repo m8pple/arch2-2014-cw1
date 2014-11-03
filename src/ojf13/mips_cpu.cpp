@@ -355,30 +355,52 @@ void mips_cpu::decode(){
 	Instruction *ir = new Instruction(_ir.value());
 	
 	for(unsigned i=0; i<NUM_INSTR; ++i){
+		//For each matching opcode, determine if the loaded instruction
+		//	matches that expected format.
 		
 		if( mipsInstruction[i].opco == ir->opcode() ){
 			switch( mipsInstruction[i].type ){
 				case RType:
 					if( mipsInstruction[i].func == ir->function()
-					   /*Strictly following spec, shift field should be '00000'b */
+					   //Strictly following spec, shift field should be '00000'b
+					   //	unless shift instr, in which case rs should be '00000'b.
+					   && ( ir->shift() == 0
+							|| ((ir->mnemonic() == SRL
+								 || ir->mnemonic() == SRA
+								 || ir->mnemonic() == SLL
+								) && ir->regS() == 0) )
+					   
+					   //Multiplication/division should have zero rd
+					   && ( (ir->mnemonic() != MULT && ir->mnemonic() != MULTU
+							 &&	ir->mnemonic() != DIV && ir->mnemonic() != DIVU)
+							|| (ir->regD() == 0) )
+					   
+					   //Move from lo/hi should have zero rs/rt
+					   && ( (ir->mnemonic() != MFLO && ir->mnemonic() != MFHI)
+							|| (ir->regS() == 0 && ir->regT() == 0) )
 					   ){
 						match(*ir, i);
 						return;
 					}
 					else
 						break;
+
 				case IType:
-					if( mipsInstruction[i].func == FIELD_NOT_EXIST
-					   || mipsInstruction[i].func == ir->regT() ){
+					if( (	mipsInstruction[i].func == FIELD_NOT_EXIST
+						 || mipsInstruction[i].func == ir->regT() )
+					   
+					   //Load upper immediate should have zero rs
+					   && (	(ir->mnemonic() != LUI)
+						   || ir->regS() == 0 )
+					   ){
 						match(*ir, i);
 						return;
 					}
 					else
 						break;
+
 				case JType:
-					if( mipsInstruction[i].func == FIELD_NOT_EXIST
-					   /*Strictly following spec, shift field should be '00000'b */
-					   ){
+					if( mipsInstruction[i].func == FIELD_NOT_EXIST ){
 						match(*ir, i);
 						return;
 					}
@@ -386,35 +408,8 @@ void mips_cpu::decode(){
 						break;
 			}
 		}
-		/*
-		 if(	((uint32_t)mipsInstruction[i].opco == ir->opcode()) &&
-		 
-		 ((	(uint32_t)mipsInstruction[i].type == RType	//Match RType
-		 &&	(uint32_t)mipsInstruction[i].func == ir->function()
-		 // Strictly following spec, shift field should be '00000'b
-		 )//&&	( shiftError == mips_InternalError ) )
-		 
-		 ||	(	(uint32_t)mipsInstruction[i].type != RType	//Match JType, most IType
-		 &&	(_fields)mipsInstruction[i].func == FIELD_NOT_EXIST)
-		 
-		 ||	(	(uint32_t)mipsInstruction[i].type == IType	//Match IType branches
-		 &&	(uint32_t)mipsInstruction[i].func == ir->regT()
-		 // Strictly following spec, shift field should be '00000'b
-		 )//&&	( shiftError == mips_InternalError ) )
-		 
-		 )){
-		 
-			fprintf(_debug_file, "Matched: " << mipsInstruction[i].mnem << std::endl;
-			ir->setDecoded((mips_asm)i, mipsInstruction[i].type);
-			_irDecoded = ir;
-			
-			_alu.setOperation((mips_asm)i);
-			return;
-		 }
-		 */
 	}
-	
-	/* BUG: Sometimes ADD r1,r2,r3 (0xFF7F00) comes here. Mostly it doesn't. Wtf. */
+
 	//no match
 	throw mips_ExceptionInvalidInstruction;
 }
@@ -437,14 +432,12 @@ void mips_cpu::fetchRegs(void){
 					_alu_in_a = _irDecoded->shift();
 					break;
 
-					//MFHI/LO OR respective with 0
+					//MFHI/LO OR respective with 0 (rt is all zeroes)
 				case MFHI:
 					_alu_in_a = _hi.value();
-					//*aluInB = 0;	//not necessary if strictly mandate zeroes instead ignore?
 					break;
 				case MFLO:
 					_alu_in_a = _lo.value();
-					//*aluInB = 0;
 					break;
 
 				default:
@@ -471,7 +464,6 @@ void mips_cpu::fetchRegs(void){
 
 				case LUI:	//pointless sign extending on 32bit system
 					_alu_in_a = 16;
-					//case SLTIU:
 				case ANDI:
 				case ORI:
 				case XORI:

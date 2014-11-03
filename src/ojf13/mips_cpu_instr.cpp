@@ -42,10 +42,8 @@ uint32_t Instruction::regD(void) const{
 		throw mips_InternalError;
 }
 uint32_t Instruction::shift(void) const{
-	switch( mnemonic() ){
-		case SRL:
-		case SRA:
-		case SLL:
+	switch( type() ){
+		case RType:
 			return (_value&MASK_SHFT)>>POS_SHFT;
 		default:
 			throw mips_InternalError;
